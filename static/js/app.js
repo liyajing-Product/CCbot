@@ -5,7 +5,7 @@ import { currentUserId, ensureSession } from "./identity.js?v=__APP_VERSION__";
 import { store } from "./store.js?v=__APP_VERSION__";
 import { initThread } from "./thread.js?v=__APP_VERSION__";
 import { initComposer, focusComposer } from "./composer.js?v=__APP_VERSION__";
-import { initDrawer, loadProfile, resetDrawer } from "./drawer.js?v=__APP_VERSION__";
+import { initDrawer, loadProfile, resetDrawer, closeDrawer } from "./drawer.js?v=__APP_VERSION__";
 import {
   sendComposer,
   askMemory,
@@ -84,6 +84,15 @@ async function boot() {
   initComposer({ onSubmit: sendComposer });
   initDrawer({ onUserChange, onProfileEdited: noteProfileEdited, onClearLocal });
   $("btnMemory").addEventListener("click", () => askMemory());
+  $("brandLogo").addEventListener("click", (e) => {
+    e.preventDefault();
+    closeDrawer();
+    const panel = $("schedulesPanel");
+    if (panel && panel.open) panel.close();
+    resetThread();
+    showHero();
+    focusComposer();
+  });
 
   try {
     await ensureSession();

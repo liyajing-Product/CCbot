@@ -1,4 +1,4 @@
-"""Personal Agent — a personal assistant agent service."""
+"""办公助理 agent — a personal assistant agent service."""
 
 import os as _os
 from pathlib import Path as _Path

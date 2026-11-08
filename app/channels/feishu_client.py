@@ -262,3 +262,204 @@ def config_status() -> dict[str, Any]:
         "api_base": api_base(),
         "app_id_set": bool(app_id()),
     }
+
+
+# ---------------------------------------------------------------------------
+# OAuth user_access_token — office tools (calendar / tasks) read the user's
+# private data, which the app-level tenant token cannot. The authorization
+# code flow is wired in app.feishu_oauth; these helpers talk to Feishu.
+# ---------------------------------------------------------------------------
+
+def oauth_scope() -> str:
+    return (
+        os.getenv("FEISHU_OAUTH_SCOPE")
+        or "calendar:calendar:readonly task:task:readonly contact:user.base:readonly"
+    ).strip()
+
+
+def oauth_authorize_url(*, state: str, redirect_uri: str) -> str:
+    """Build the user-facing Feishu authorization URL."""
+    from urllib.parse import urlencode
+
+    return (
+        f"{api_base()}/open-apis/authen/v1/authorize?"
+        + urlencode({
+            "app_id": app_id(),
+            "redirect_uri": redirect_uri,
+            "state": state,
+            "scope": oauth_scope(),
+        })
+    )
+
+
+def _oauth_response(r: httpx.Response, data: dict[str, Any]) -> dict[str, Any]:
+    if r.status_code >= 400 or int(data.get("code", -1)) != 0:
+        return {"ok": False, "reason": "feishu_oauth_failed",
+                "status_code": r.status_code, "data": data}
+    inner = data.get("data") if isinstance(data.get("data"), dict) else {}
+    access = data.get("access_token") or inner.get("access_token") or ""
+    refresh = data.get("refresh_token") or inner.get("refresh_token") or ""
+    expires_in = int(data.get("expires_in") or inner.get("expires_in") or 7200)
+    if not access:
+        return {"ok": False, "reason": "feishu_oauth_no_access_token", "data": data}
+    return {"ok": True, "access_token": access, "refresh_token": refresh,
+            "expires_at": time.time() + max(expires_in, 60)}
+
+
+def exchange_code(*, code: str, redirect_uri: str) -> dict[str, Any]:
+    if not is_configured():
+        return {"ok": False, "reason": "feishu_not_configured"}
+    url = f"{api_base()}/open-apis/authen/v1/access_token"
+    body = {
+        "grant_type": "authorization_code",
+        "client_id": app_id(),
+        "client_secret": app_secret(),
+        "code": code,
+        "redirect_uri": redirect_uri,
+    }
+    try:
+        with httpx.Client(timeout=20) as client:
+            r = client.post(url, json=body)
+        data = r.json() if r.content else {}
+    except httpx.HTTPError as exc:
+        return {"ok": False, "reason": "feishu_http_error", "error": type(exc).__name__}
+    return _oauth_response(r, data)
+
+
+def refresh_user_token(*, refresh_token: str) -> dict[str, Any]:
+    if not is_configured():
+        return {"ok": False, "reason": "feishu_not_configured"}
+    if not refresh_token:
+        return {"ok": False, "reason": "no_refresh_token"}
+    url = f"{api_base()}/open-apis/authen/v1/refresh_access_token"
+    body = {
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,
+        "client_id": app_id(),
+        "client_secret": app_secret(),
+    }
+    try:
+        with httpx.Client(timeout=20) as client:
+            r = client.post(url, json=body)
+        data = r.json() if r.content else {}
+    except httpx.HTTPError as exc:
+        return {"ok": False, "reason": "feishu_http_error", "error": type(exc).__name__}
+    out = _oauth_response(r, data)
+    if out.get("ok") and not out.get("refresh_token"):
+        out["refresh_token"] = refresh_token
+    return out
+
+
+def get_user_info(*, user_token: str) -> dict[str, Any]:
+    url = f"{api_base()}/open-apis/authen/v1/user_info"
+    try:
+        with httpx.Client(timeout=20) as client:
+            r = client.get(url, headers={"Authorization": f"Bearer {user_token}"})
+        data = r.json() if r.content else {}
+    except httpx.HTTPError as exc:
+        return {"ok": False, "reason": "feishu_http_error", "error": type(exc).__name__}
+    if r.status_code >= 400 or int(data.get("code", -1)) != 0:
+        return {"ok": False, "reason": "feishu_user_info_failed",
+                "status_code": r.status_code, "data": data}
+    d = data.get("data") or {}
+    return {"ok": True, "open_id": d.get("open_id") or "",
+            "name": d.get("name") or "", "union_id": d.get("union_id") or ""}
+
+
+def get_user_token(*, open_id: str) -> Optional[str]:
+    """Return a valid user_access_token for an open_id, refreshing when needed."""
+    from app.data_access.feishu_token import get_token as _get, save_token as _save
+
+    rec = _get(open_id)
+    if not rec or not rec.get("access_token"):
+        return None
+    if rec.get("expires_at", 0) > time.time() + 60:
+        return rec["access_token"]
+    if rec.get("refresh_token"):
+        refreshed = refresh_user_token(refresh_token=rec["refresh_token"])
+        if refreshed.get("ok") and refreshed.get("access_token"):
+            _save(
+                open_id=open_id,
+                user_id=rec["user_id"],
+                access_token=refreshed["access_token"],
+                refresh_token=refreshed.get("refresh_token") or rec["refresh_token"],
+                expires_at=refreshed.get("expires_at", 0),
+            )
+            return refreshed["access_token"]
+    return rec["access_token"]
+
+
+def _get_json(*, path: str, params: Optional[dict[str, Any]] = None,
+               user_token: str = "") -> dict[str, Any]:
+    url = f"{api_base()}{path}"
+    headers = {"Authorization": f"Bearer {user_token}"} if user_token else _auth_headers()
+    try:
+        with httpx.Client(timeout=30) as client:
+            r = client.get(url, params=params or {}, headers=headers)
+        data = r.json() if r.content else {}
+    except httpx.HTTPError as exc:
+        return {"ok": False, "reason": "feishu_http_error", "error": type(exc).__name__}
+    if r.status_code >= 400 or int(data.get("code", -1)) != 0:
+        return {"ok": False, "reason": "feishu_api_error",
+                "status_code": r.status_code, "data": data}
+    return {"ok": True, "data": data.get("data") or data}
+
+
+def list_calendars(*, user_token: str) -> dict[str, Any]:
+    out = _get_json(path="/open-apis/calendar/v4/calendars",
+                    params={"page_size": 50}, user_token=user_token)
+    if not out.get("ok"):
+        return out
+    cals = (out.get("data") or {}).get("calendar_list") or []
+    return {"ok": True, "calendars": [
+        {"calendar_id": c.get("calendar_id") or "", "summary": c.get("summary") or "",
+         "type": c.get("type") or ""}
+        for c in cals if isinstance(c, dict)
+    ]}
+
+
+def list_calendar_events(*, user_token: str, calendar_id: str,
+                         start_time: str = "", end_time: str = "") -> dict[str, Any]:
+    params: dict[str, Any] = {"page_size": 50}
+    if start_time:
+        params["start_time"] = start_time
+    if end_time:
+        params["end_time"] = end_time
+    out = _get_json(path=f"/open-apis/calendar/v4/calendars/{calendar_id}/events",
+                    params=params, user_token=user_token)
+    if not out.get("ok"):
+        return out
+    events = []
+    for e in (out.get("data") or {}).get("items") or []:
+        if not isinstance(e, dict):
+            continue
+        st = e.get("start_time") or {}
+        et = e.get("end_time") or {}
+        events.append({
+            "event_id": e.get("event_id") or "",
+            "summary": e.get("summary") or "",
+            "start": st.get("timestamp") or st.get("date") or "",
+            "end": et.get("timestamp") or et.get("date") or "",
+            "status": e.get("status") or "",
+        })
+    return {"ok": True, "events": events}
+
+
+def list_tasks(*, user_token: str) -> dict[str, Any]:
+    out = _get_json(path="/open-apis/task/v2/tasks",
+                    params={"user_id_type": "open_id", "page_size": 50}, user_token=user_token)
+    if not out.get("ok"):
+        return out
+    tasks = []
+    for t in (out.get("data") or {}).get("items") or []:
+        if not isinstance(t, dict):
+            continue
+        due = t.get("due")
+        tasks.append({
+            "guid": t.get("guid") or t.get("id") or "",
+            "summary": t.get("summary") or "",
+            "due": due.get("timestamp") if isinstance(due, dict) else "",
+            "completed_at": t.get("completed_at") or "",
+            "done": bool(t.get("completed_at")),
+        })
+    return {"ok": True, "tasks": tasks}

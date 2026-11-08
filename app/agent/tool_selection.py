@@ -26,6 +26,9 @@ TOOL_ROUTES = {
     "fetch_feed": "chat",
     "get_hn": "chat",
     "search_social": "chat",
+    "feishu_calendar_list": "chat",
+    "feishu_calendar_events": "chat",
+    "feishu_task_list": "chat",
 }
 MIN_CONFIDENCE = 0.8
 

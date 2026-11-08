@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="referrer" content="no-referrer" />
   <meta name="robots" content="noindex" />
-  <title>绑定个人档案 · Personal Agent</title>
+  <title>绑定个人档案 · CCbot</title>
   <link rel="stylesheet" href="/static/design.css?v=__APP_VERSION__" />
   <style>
-    body { display: flex; justify-content: center; padding: 48px 16px; background: var(--bg); color: var(--text); }
-    .panel { width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; }
-    h1 { font-size: 20px; margin: 0 0 8px; }
+    body.app { align-items: center; padding: clamp(32px, 8vh, 80px) 16px; }
+    .panel { width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 28px; }
+    h1 { font-size: 28px; font-weight: 600; line-height: 1.21; margin: 0 0 16px; }
     p { color: var(--text-secondary); line-height: 1.6; margin: 0 0 16px; }
     .btn { width: 100%; margin-top: 20px; }
     .msg { margin-top: 16px; font-size: 14px; line-height: 1.6; }
@@ -19,7 +19,7 @@
     .note { font-size: 12px; color: var(--text-tertiary); margin-top: 18px; }
   </style>
 </head>
-<body>
+<body class="app">
   <main class="panel">
     <h1>绑定个人档案</h1>
     <p id="intro">正在检查链接…</p>

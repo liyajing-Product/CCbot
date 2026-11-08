@@ -230,8 +230,11 @@ def node_chat(state: AgentState) -> dict[str, Any]:
                 logging.getLogger("crisis").warning("crisis_reply_fixed_block elapsed=%.1fs", _time.monotonic() - t_start)
         else:
             from app.agent.crawl_tools import source_context, CRAWL_TOOLS
+            from app.agent.office_tools import office_context, FEISHU_OFFICE_TOOLS
             if result.rule_id in {"model_tool:" + name for name in CRAWL_TOOLS}:
                 system += source_context(msg, state)
+            if result.rule_id in {"model_tool:" + name for name in FEISHU_OFFICE_TOOLS}:
+                system += office_context(msg, state)
             raw = chat_text(
                 system,
                 f"{context}\n{msg}" if context else msg,

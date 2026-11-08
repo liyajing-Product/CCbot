@@ -1,8 +1,8 @@
 <div align="center">
 
-# Personal Agent
+# 办公助理 agent
 
-**有长期记忆的个人助理底座**
+**有长期记忆的办公助理**
 
 陪你聊、记住你说过的事、替你起草、按时提醒。<br>
 任何会产生后果的动作，都先给你一张确认卡。
@@ -12,7 +12,7 @@ LangGraph · FastAPI · 原生 JS 前端 · 可二次开发 · MIT
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](Dockerfile)
 [![Version](https://img.shields.io/badge/version-0.8.2-informational.svg)](VERSION)
-[![Deploy to Render](https://img.shields.io/badge/Deploy-Render-46E3B7.svg)](https://render.com/deploy?repo=https://github.com/hubooooooo/Personal-Agent)
+[![Deploy to Render](https://img.shields.io/badge/Deploy-Render-46E3B7.svg)](https://render.com/deploy?repo=https://github.com/your-name/office-assistant-agent)
 
 [快速开始](#快速开始) · [它能做什么](#它能做什么) · [工作原理](#工作原理) · [多渠道接入](#多渠道接入) · [安全与隐私](#安全与隐私) · [二次开发](#二次开发)
 
@@ -22,7 +22,7 @@ LangGraph · FastAPI · 原生 JS 前端 · 可二次开发 · MIT
 
 ## 为什么是它
 
-市面上的「个人助理」要么是一个聊天框，关掉就忘；要么能力很强，但你不敢把它接进飞书和微信。Personal Agent 想做的是中间那条路：
+市面上的「个人助理」要么是一个聊天框，关掉就忘；要么能力很强，但你不敢把它接进飞书和微信。办公助理 agent 想做的是中间那条路：
 
 - **真的记得你。** 姓名、城市、职业、兴趣、偏好和你随口提过的事，会沉淀成一张可查看、可修改、可遗忘的记忆卡，而不是藏在某个向量库里。
 - **先确认，再行动。** 写草稿、建定时任务、调用外部工具，统统先出确认卡。它不会替你发消息、发邮件、提交表单，也不会在聊天里收你的密码和手机号。
@@ -61,7 +61,7 @@ LangGraph · FastAPI · 原生 JS 前端 · 可二次开发 · MIT
 需要 Python 3.12。
 
 ```bash
-git clone https://github.com/hubooooooo/Personal-Agent.git && cd Personal-Agent
+git clone https://github.com/your-name/office-assistant-agent.git && cd office-assistant-agent
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt -c requirements.lock
 cp .env.example .env

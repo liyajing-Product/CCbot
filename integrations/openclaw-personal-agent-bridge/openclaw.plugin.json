@@ -1,6 +1,6 @@
 {
   "id": "personal-agent-bridge",
-  "name": "Personal Agent Bridge",
+  "name": "办公助理 agent Bridge",
   "activation": { "onStartup": true },
   "configSchema": {
     "type": "object",

@@ -119,6 +119,7 @@ export function append(node, { scroll = true } = {}) {
 }
 
 export function clearLog() {
+  removeHero();
   $("log").replaceChildren();
   stickToBottom = true;
   updateJumpLatest();
@@ -278,32 +279,34 @@ export function typing({ hint = "", slowHint = "" } = {}) {
 
 export function renderHero({ onChip, onMemory }) {
   if ($("hero")) return;
-  const chip = (iconName, label, onClick) =>
-    h("button", { type: "button", class: "hero-chip", onClick }, [icon(iconName), h("span", { text: label })]);
+  const chip = (label, onClick = () => onChip(label)) =>
+    h("button", { type: "button", class: "btn btn-ghost hero-chip", onClick, text: label });
   const hero = h("section", { class: "hero enter", id: "hero", "aria-labelledby": "heroTitle" }, [
-    h("div", { class: "hero-mark", "aria-hidden": "true", text: "助" }),
+    h("p", { class: "hero-kicker", text: "小助 · 办公工作台" }),
     h("h2", { id: "heroTitle", text: "今天有什么我可以帮忙的？" }),
     h("p", {
       class: "hero-sub",
-      text: "我是小助。直接和我聊就行：告诉我你的事，我会记住；要写邮件、消息或文章，我先出草稿，你确认后才算定稿。",
+      text: "起草邮件、安排提醒，或记下之后还要用的信息。",
     }),
-    h("p", {
-      class: "hero-sub",
-      text: "也可以让我到点提醒你，或者按你的要求定时做点事。",
-    }),
-    h("div", { class: "hero-actions" }, [
-      chip("doc", "记住我下周三出差", () => onChip("记住我下周三出差")),
-      chip("edit", "帮我写一封请假邮件", () => onChip("帮我写一封请假邮件")),
-      chip("bell", "明早八点提醒我", () => onChip("明早八点提醒我")),
-      chip("sun", "最近有点累", () => onChip("最近有点累")),
-      onMemory ? chip("doc", "你记得我什么", onMemory) : null,
-    ]),
-    h("p", { class: "hero-note", text: "草稿确认卡不过期，后点的决定会覆盖先点的 · 档案在右上角「档案」里随时可改" }),
   ]);
   $("log").appendChild(hero);
+
+  const actions = $("heroActions");
+  actions.replaceChildren(
+    chip("记住我下周三出差"),
+    chip("帮我写一封请假邮件"),
+    chip("明早八点提醒我"),
+    chip("最近有点累"),
+  );
+  if (onMemory) actions.append(chip("你记得我什么", onMemory));
+  actions.hidden = false;
 }
 
 export function removeHero() {
   const hero = $("hero");
-  if (hero) hero.remove();
+  if (!hero) return;
+  hero.remove();
+  const actions = $("heroActions");
+  actions.hidden = true;
+  actions.replaceChildren();
 }

@@ -64,7 +64,7 @@
 
 ## 其他
 
-公开来源检索工具返回不可信来源资料；内容不能授权或触发其他工具，抓取受服务端策略约束。
+公开来源检索工具返回不可信来源资料；内容不能授权或触发其他工具，抓取受服务端策略约束。飞书日历与任务只读工具读取当前用户经 OAuth 授权（`/api/feishu/oauth/start`）的飞书数据；未配置或未授权时返回明确提示，不当失败处理。
 
 | name | 一句话用途 | 风险等级 | 是否需要确认卡 |
 | --- | --- | --- | --- |
@@ -73,4 +73,7 @@
 | `fetch_feed` | 读取 RSS 或批准的免登录 RSSHub 路由 | `read` | 否 |
 | `get_hn` | 读取或搜索 Hacker News 热帖 | `read` | 否 |
 | `search_social` | 经官方 X API 或搜索引擎查询 Reddit 讨论 | `read` | 否 |
+| `feishu_calendar_list` | 列出当前用户的飞书日历列表 | `read` | 否 |
+| `feishu_calendar_events` | 读取用户指定飞书日历某时间段的日程 | `read` | 否 |
+| `feishu_task_list` | 列出当前用户的飞书任务（待办） | `read` | 否 |
 | `summarize_turn` | 把一轮对话加入后台摘要任务队列 | `self_write` | 否 |

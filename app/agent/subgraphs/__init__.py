@@ -1,4 +1,4 @@
-"""LangGraph subgraphs — node implementations for the Personal Agent."""
+"""LangGraph subgraphs — node implementations for the 办公助理 agent."""
 
 from __future__ import annotations
 

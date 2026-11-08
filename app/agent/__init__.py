@@ -1,4 +1,4 @@
-"""Personal Agent core: router, tool registry, subgraphs, memory, loop, harness."""
+"""办公助理 agent core: router, tool registry, subgraphs, memory, loop, harness."""
 
 from __future__ import annotations
 

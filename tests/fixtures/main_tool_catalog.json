@@ -1,7 +1,10 @@
 {
-  "source_commit": "generic-agent rewrite (31 tools, memory_facts_search flag-gated)",
+  "source_commit": "office-agent: +feishu calendar/tasks (34 tools)",
   "names": [
     "draft_text",
+    "feishu_calendar_events",
+    "feishu_calendar_list",
+    "feishu_task_list",
     "fetch_feed",
     "get_hn",
     "memory_card",
@@ -33,6 +36,6 @@
     "web_fetch",
     "web_search"
   ],
-  "catalog_sha256": "45e8994f2fd677a8200b1cdae7a4d7bc5c3654e3c939d7686c4f2727eeba81e4",
-  "model_catalog_sha256": "5eece99b8dd3d428705ec972d15d1d79f662bd0178e3af1c6661f15486d3149d"
+  "catalog_sha256": "f039f1ad5f460679c3fdfb9c6f524336108c06e559f148bf9176402588cac381",
+  "model_catalog_sha256": "1ad26b4d118417a624c7195e86f1eee8c6a0a863017b4847cbaa72a674db2558"
 }

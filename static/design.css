@@ -1,8 +1,4 @@
-/* Personal Agent · Light — shared tokens & primitives (v__APP_VERSION__)
-   Canvas #FCFCFC · Ink #191919 (soft-black primary) · Geist (self-hosted, CJK falls back to system)
-   Blue #008CFF / #0049D6 for links & status dots only · Amber for reminders.
-   Text tokens are tuned for WCAG AA (≥ 4.5:1) on every surface they are used on;
-   the vivid hues (--blue, --amber, --success, --error) are for dots, bars and borders. */
+/* CCbot · Pillio-style design tokens (orange #F4622A) */
 
 @font-face {
   font-family: "Geist";
@@ -25,70 +21,64 @@
 :root {
   color-scheme: light;
 
-  /* Backgrounds */
-  --bg: #FCFCFC;
-  --surface: #FFFFFF;
-  --surface-alt: #FAFAFB;
-  --surface-soft: #F0F0F2;
-  --surface-hover: rgba(25, 25, 25, 0.04);
-  --surface-active: rgba(25, 25, 25, 0.07);
+  --bg: #f8f9fb;
+  --surface: #ffffff;
+  --surface-alt: #f1f3f5;
+  --surface-soft: #f5f6f8;
+  --surface-hover: #eef0f3;
+  --surface-active: #e5e7eb;
+  --surface-dark: #1f2937;
 
-  /* Borders */
-  --border: #E7E7EA;
-  --border-hover: #C9CDD4;
-  --border-strong: rgba(25, 25, 25, 0.16);
-  --border-control: #8E8E96;
+  --border: #e5e7eb;
+  --border-hover: #d1d5db;
+  --border-strong: #9ca3af;
+  --border-control: var(--border);
 
-  /* Text */
-  --text: #191919;
-  --text-secondary: #5F5F66;
-  --text-tertiary: #6B6B73;
-  --text-placeholder: #6B6B73;
-  --text-inverse: #FFFFFF;
-  --text-inverse-muted: rgba(255, 255, 255, 0.78);
+  --text: #1f2937;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --text-placeholder: #9ca3af;
+  --text-inverse: #ffffff;
+  --text-inverse-muted: #e5e7eb;
+  --text-on-accent: #ffffff;
 
-  /* Accent — 软黑即主色（主 CTA / 用户气泡 / 确认卡） */
-  --accent: #191919;
-  --accent-hover: #0E0E0E;
-  --accent-soft: rgba(25, 25, 25, 0.06);
-  --accent-soft-2: rgba(25, 25, 25, 0.10);
-  --accent-ring: rgba(25, 25, 25, 0.22);
-  --focus-ring: #191919;
+  --accent: #f4622a;
+  --accent-hover: #e0541d;
+  --accent-soft: #fdebe2;
+  --accent-soft-2: #fad9c8;
+  --accent-ring: #f4622a;
+  --focus-ring: #f4622a;
 
-  /* Blue — 仅链接与状态点 */
-  --blue: #008CFF;
-  --blue-deep: #0049D6;
-  --blue-soft: rgba(0, 140, 255, 0.08);
-  --link: var(--blue-deep);
-  --link-hover: #0038A8;
+  --blue: #f4622a;
+  --blue-deep: #c74a16;
+  --blue-soft: #fdebe2;
+  --link: #f4622a;
+  --link-hover: #c74a16;
 
-  /* Amber — 提醒 / 缺口 / 暂不可用 */
-  --amber: #F59E0B;
-  --amber-deep: #B45309;
-  --amber-text: #92400E;
-  --amber-soft: rgba(245, 158, 11, 0.14);
-
-  /* Semantic */
-  --success: #16A34A;
-  --success-strong: #15803D;
-  --success-text: #166534;
-  --success-soft: rgba(22, 163, 74, 0.10);
-  --error: #F53F3F;
-  --error-strong: #CB272D;
-  --error-text: #B42318;
-  --error-soft: rgba(245, 63, 63, 0.09);
+  --amber: #f59e0b;
+  --amber-deep: #b45309;
+  --amber-text: #92400e;
+  --amber-soft: #fef3c7;
+  --success: #10b981;
+  --success-strong: #059669;
+  --success-text: #047857;
+  --success-soft: #e6f9f1;
+  --error: #ef4444;
+  --error-strong: #dc2626;
+  --error-text: #b91c1c;
+  --error-soft: #fee2e2;
   --warning: var(--amber);
   --warning-soft: var(--amber-soft);
   --info: var(--accent);
   --info-soft: var(--accent-soft);
 
-  /* Radius（12–16 为主） */
-  --radius-tag: 6px;
-  --radius-compact: 8px;
-  --radius-control: 12px;
-  --radius-card: 16px;
-  --radius-feature: 20px;
   --radius-pill: 9999px;
+  --radius-tag: var(--radius-pill);
+  --radius-compact: var(--radius-pill);
+  --radius-control: var(--radius-pill);
+  --radius-card: 16px;
+  --radius-feature: var(--radius-card);
+  --page-width: 1200px;
 
   /* Motion */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -96,18 +86,17 @@
   --duration: 0.18s;
   --duration-sidebar: 0.28s;
 
-  /* Type */
-  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "PingFang SC",
-    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC",
+  /* Typography */
+  --font-sans: "Geist", -apple-system, BlinkMacSystemFont,
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC",
     system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
     Consolas, "Liberation Mono", "Courier New", monospace;
 
-  /* Elevation — border-first, shadows stay quiet */
-  --shadow-hover: 0 4px 16px rgba(23, 24, 26, 0.05);
-  --shadow-raised: 0 8px 24px rgba(25, 25, 25, 0.09);
-  --shadow-modal: 0 24px 48px rgba(15, 15, 20, 0.14);
-  --scrim: rgba(20, 20, 24, 0.42);
+  --shadow-hover: 0 2px 8px rgba(17, 24, 39, 0.06);
+  --shadow-raised: 0 4px 16px rgba(17, 24, 39, 0.10);
+  --shadow-modal: 0 12px 32px rgba(17, 24, 39, 0.18);
+  --scrim: #0000004d;
 
   /* Sizing */
   --control-h-sm: 32px;
@@ -128,6 +117,9 @@ body.app {
   flex-direction: column;
   font-family: var(--font-sans);
   font-weight: 400;
+  font-size: 17px;
+  line-height: 1.65;
+  letter-spacing: -0.01em;
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
@@ -161,7 +153,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   top: -48px;
   z-index: 100;
   background: var(--accent);
-  color: var(--text-inverse);
+  color: var(--text-on-accent);
   padding: 8px 14px;
   border-radius: var(--radius-control);
   font-size: 13px;
@@ -208,7 +200,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .btn-primary {
   background: var(--accent);
-  color: var(--text-inverse);
+  color: var(--text-on-accent);
 }
 .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
 .btn-primary:active:not(:disabled) { transform: translateY(1px); }
@@ -233,17 +225,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
   color: var(--text);
 }
 
-.btn-danger {
-  background: var(--error-strong);
-  color: var(--text-inverse);
-}
-.btn-danger:hover:not(:disabled) { filter: brightness(0.94); }
-
+.btn-danger,
 .btn-success {
-  background: var(--success-strong);
-  color: var(--text-inverse);
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text);
 }
-.btn-success:hover:not(:disabled) { filter: brightness(0.94); }
+.btn-danger:hover:not(:disabled),
+.btn-success:hover:not(:disabled) { background: var(--surface-hover); }
 
 .btn-text {
   background: transparent;
@@ -305,12 +294,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 2px solid var(--text-inverse);
+  border: 2px solid var(--text);
   border-right-color: transparent;
   animation: ja-spin 0.7s linear infinite;
 }
 .btn-ghost.is-loading::after,
-.btn-quiet.is-loading::after { border-color: var(--text); border-right-color: transparent; }
+.btn-primary.is-loading::after { border-color: var(--text-inverse); border-right-color: transparent; }
 
 /* ---------- Header ---------- */
 .app-header {
@@ -319,10 +308,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   flex-wrap: wrap;
   gap: 10px;
   padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.86);
-  backdrop-filter: saturate(1.4) blur(12px);
-  -webkit-backdrop-filter: saturate(1.4) blur(12px);
-  border-bottom: 1px solid var(--border);
+  background: #ffffff;
   position: sticky;
   top: 0;
   z-index: 30;
@@ -332,26 +318,22 @@ button, input, select, textarea { font: inherit; color: inherit; }
   align-items: center;
   gap: 10px;
   min-width: 0;
+  text-decoration: none;
+  color: var(--text);
 }
-.app-header .brand-mark {
-  width: 28px;
-  height: 28px;
-  border-radius: 9px;
-  background: var(--accent);
-  color: var(--text-inverse);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 600;
+.app-header .brand:hover { opacity: 0.82; }
+.brand-logo {
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
+  display: block;
 }
 .app-header h1 {
   margin: 0;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
   color: var(--text);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   white-space: nowrap;
 }
 .app-header a {
@@ -461,7 +443,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .tag.tag-amber { background: var(--amber-soft); color: var(--amber-text); }
 .tag.tag-ok { background: var(--success-soft); color: var(--success-text); }
-.tag.tag-ink { background: var(--accent); color: var(--text-inverse); }
+.tag.tag-ink { background: var(--accent); color: var(--text-on-accent); }
 
 /* ---------- Links ---------- */
 a.link {
@@ -486,7 +468,7 @@ a.link:hover {
   color: var(--text);
   border-radius: var(--radius-control);
   padding: 9px 13px;
-  font-size: 13.5px;
+  font-size: 16px;
   font-family: inherit;
   line-height: 1.45;
   transition: border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
@@ -501,7 +483,7 @@ a.link:hover {
   outline-offset: 1px;
   border-color: var(--text);
 }
-textarea.field-input { resize: vertical; min-height: 88px; line-height: 1.6; }
+textarea.field-input { border-radius: var(--radius-card); resize: vertical; min-height: 88px; line-height: 1.6; }
 select.field-input {
   appearance: none;
   background-image: linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%),

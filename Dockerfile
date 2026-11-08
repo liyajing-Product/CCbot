@@ -1,4 +1,4 @@
-# Personal Agent — production image for Render / any container host
+# 办公助理 agent — production image for Render / any container host
 FROM python:3.12-slim
 
 WORKDIR /app

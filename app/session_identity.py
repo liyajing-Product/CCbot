@@ -45,6 +45,9 @@ EXEMPT_EXACT = {
     "/api/sandbox/submit",
     "/api/sandbox/draft",
     "/api/proactive/tick",
+    # OAuth callback carries its own credential (signed ``state``); the Feishu
+    # redirect has no browser session cookie.
+    "/api/feishu/oauth/callback",
 }
 EXEMPT_PREFIXES = ("/api/admin/", "/api/traces/")
 

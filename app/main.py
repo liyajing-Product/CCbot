@@ -1,4 +1,4 @@
-"""FastAPI entry — Personal Agent."""
+"""FastAPI entry — 办公助理 agent."""
 
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ STATIC = ROOT / "static"
 
 load_dotenv(ROOT / ".env")
 
-app = FastAPI(title="Personal Agent", version=__version__)
+app = FastAPI(title="办公助理 agent", version=__version__)
 app.router.route_class = AuditedAdminRoute
 
 # Browser chat from other origins (same-origin on Render also fine).
@@ -72,8 +72,10 @@ app.add_middleware(
     expose_headers=["X-Trace-Id"],
 )
 from app.admin.api import router as admin_router  # noqa: E402
+from app.feishu_oauth import router as feishu_oauth_router  # noqa: E402
 
 app.include_router(admin_router)
+app.include_router(feishu_oauth_router)
 # Every user-scoped /api call is bound to the server session (outermost).
 from app.session_identity import SESSION_COOKIE, SessionIdentityMiddleware, new_anonymous_user_id, session_user  # noqa: E402
 
@@ -447,7 +449,7 @@ def health() -> dict[str, Any]:
 
     return {
         "ok": True,
-        "service": "personal-agent",
+        "service": "办公助理 agent",
         "llm": "live" if has_llm() else "mock",
         "fast": routing["fast"],
         "strong": routing["strong"],

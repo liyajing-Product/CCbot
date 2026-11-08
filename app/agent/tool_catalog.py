@@ -31,6 +31,9 @@ _ROWS = {
 'memory_forget': ('经明确确认后清除用户档案和事件记忆。 Erase profile and event memory after confirmation.', '用户明确选择全部遗忘并确认时使用。 Use after explicit confirmation to forget everything.', '只纠正或删除单条记忆时不要使用。 Do not use for a single correction or deletion.', 30),
 'summarize_turn': ('把一轮对话加入后台摘要任务队列。 Enqueue a conversation turn for background summarization.', '一轮对话结束且需要保留摘要时使用。 Use after a turn worth summarizing.', '不会立即返回摘要，不用于读取历史。 Do not expect an immediate summary or history read.', 10),
 'proactive.deliver': ('向本人已绑定的渠道发送一条提醒。 Deliver one reminder to the owner’s bound channel.', '提醒已准备好且收件渠道属于当前用户时使用。 Use for a prepared reminder to a verified owner channel.', '不能向未绑定渠道或其他用户发送。 Do not deliver to unbound channels or other users.', 20),
+'feishu_calendar_list': ('列出当前用户的飞书日历列表。 List the current user’s Feishu calendars.', '用户询问自己的飞书日历、日程或会议时，先列日历拿 calendar_id。 Use to list calendars before reading events.', '不查他人日历，不创建或修改日程。 Never read another user’s calendar or modify events.', 30),
+'feishu_calendar_events': ('读取用户指定飞书日历某时间段的日程。 List events in one of the user’s Feishu calendars.', '用户问某天或某段时间的日程会议时，先用 calendar_id 再查。 Use with a calendar_id and a time range.', '没有 calendar_id 先列日历；不修改或创建日程。 Never guess a calendar_id or modify events.', 30),
+'feishu_task_list': ('列出当前用户的飞书任务（待办）。 List the current user’s Feishu tasks.', '用户问自己的待办、任务清单或今天要做什么时使用。 Use to list the user’s Feishu tasks.', '不查他人任务，不创建或修改任务。 Never read another user’s tasks or modify them.', 30),
 }
 
 

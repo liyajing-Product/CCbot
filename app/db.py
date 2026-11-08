@@ -69,6 +69,7 @@ def init_db() -> None:
     from app.admin.models import AdminChangeLog, AdminUserFlag  # noqa: F401
     from app.data_access.memory_facts import MemoryFact  # noqa: F401
     from app.data_access.memory_migration import MigrationReceipt  # noqa: F401
+    from app.data_access.feishu_token import FeishuUserToken  # noqa: F401
 
     if ENGINE.dialect.name == "postgresql":
         return  # Schema is provisioned by the owner migration, never the app role.
