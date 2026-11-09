@@ -23,13 +23,21 @@ def call(fn, *args, **kwargs):
 def listing(job_kind: str | None = None):
     def result(uid):
         items = service.list_schedules(uid, job_kind)
-        return {'schedules': items, 'stats': {k: sum(s[k] for s in items) for k in ('run_count', 'success_count', 'fail_count')}}
+        from app.agent.proactive.scheduler import status
+        state = status()
+        return {'schedules': items, 'tz': service.default_timezone(uid),
+                'scheduler': {'enabled': state['proactive_enabled'], 'alive': state['scheduler_alive']}, 'stats': {k: sum(s[k] for s in items) for k in ('run_count', 'success_count', 'fail_count')}}
     return call(result)
 
 
 @router.post('')
 def create(body: dict = Body(...)):
     return call(service.mutate, 'create', {k: v for k, v in body.items() if k != 'user_id'})
+
+
+@router.post('/proposals')
+def propose_creation(body: dict = Body(...)):
+    return call(service.propose, 'create', {k: v for k, v in body.items() if k != 'user_id'})
 
 
 class Decision(BaseModel):

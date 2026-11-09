@@ -236,6 +236,10 @@ def complete(
 ) -> Result:
     cfg = get_config()
     chain = cfg.task_chain(task, tier)
+    from app import user_model
+    user_spec = user_model.get_current()
+    if user_spec is not None:
+        chain = [user_spec] + [s for s in chain if s.id != user_spec.id]
     res = Result(tier=tier, request_id=uuid.uuid4().hex[:12], chain=chain)
     if not any(s.has_key() for s in chain):
         res.mode = "mock"

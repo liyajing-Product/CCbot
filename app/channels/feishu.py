@@ -59,7 +59,7 @@ def render_feishu_card(reply: ChannelReply) -> dict[str, Any]:
         "config": {"wide_screen_mode": True},
         "header": {
             "template": template,
-            "title": {"tag": "plain_text", "content": reply.title or "个人助理"},
+            "title": {"tag": "plain_text", "content": reply.title or "健康陪伴助手"},
         },
         "elements": elements,
     }

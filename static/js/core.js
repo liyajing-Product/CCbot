@@ -220,12 +220,12 @@ export function announce(text) {
   }, 40);
 }
 
-export function toast(text, { error = false } = {}) {
+export function toast(text, { error = false, duration = 3200 } = {}) {
   const wrap = $("toastWrap");
   if (!wrap) return;
   const node = h("div", { class: `toast${error ? " is-error" : ""}`, text });
   wrap.appendChild(node);
-  window.setTimeout(() => node.remove(), 3200);
+  window.setTimeout(() => node.remove(), duration);
 }
 
 export async function copyText(text) {

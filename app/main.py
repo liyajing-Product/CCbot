@@ -1,4 +1,4 @@
-"""FastAPI entry — 办公助理 agent."""
+"""FastAPI entry — Health House."""
 
 from __future__ import annotations
 
@@ -31,6 +31,7 @@ from app.channels import (
     parse_openclaw_webhook,
     unbind_channel,
 )
+from app.channels.settings import public_base_url
 from app.gateway.llm_gateway import gateway_info, has_llm
 from app.graph import ContinueError, continue_task, get_thread_snapshot, new_thread_id, run_action, update_thread_state
 from app.llm import capabilities
@@ -51,7 +52,7 @@ STATIC = ROOT / "static"
 
 load_dotenv(ROOT / ".env")
 
-app = FastAPI(title="办公助理 agent", version=__version__)
+app = FastAPI(title="Health House", version=__version__)
 app.router.route_class = AuditedAdminRoute
 
 # Browser chat from other origins (same-origin on Render also fine).
@@ -449,7 +450,7 @@ def health() -> dict[str, Any]:
 
     return {
         "ok": True,
-        "service": "办公助理 agent",
+        "service": "Health House",
         "llm": "live" if has_llm() else "mock",
         "fast": routing["fast"],
         "strong": routing["strong"],
@@ -726,6 +727,8 @@ def _chat_intent_response(out: dict[str, Any], intent: str, user_id: str = "") -
     data["continue_card"] = state.get("pending_continue")
     if intent == "chat" and state.get("ask"):
         data["ask"] = state.get("ask")
+    if intent == "chat" and state.get("health_card"):
+        data["health_card"] = state.get("health_card")
     if state.get("error"):
         data["error"] = state.get("error")
     return ApiResponse(thread_id=out["thread_id"], status="chat", data=data)
@@ -884,7 +887,6 @@ def _chat(body: ChatRequest) -> ApiResponse:
 
     from app.agent.router import intent_result_for
     intent_state = {"user_id": body.user_id, "message": msg, "action": ""}
-    intent_result_for(intent_state, msg)
     reply_to = _clean_reply_to(body.reply_to)
     if reply_to and msg:
         from app.agent.ask_cards import selected_intent
@@ -945,6 +947,21 @@ def _chat(body: ChatRequest) -> ApiResponse:
                 data=_with_confirm_flags(result["data"], result["awaiting_confirm"]),
             )
 
+    # Offline medication reminder: common phrasings work without a model key.
+    from app.agent.schedules.medication import looks_like_medication_reminder, propose_medication
+    from app.agent.crisis_rules import has_crisis_signal
+    if looks_like_medication_reminder(msg) and not has_crisis_signal(msg):
+        saved = update_thread_state(tid, {"user_id": body.user_id, "thread_id": tid})
+        if saved["state"].get("error"):
+            return _chat_intent_response(saved, "chat", user_id=body.user_id)
+        try:
+            data = propose_medication(body.user_id, msg)
+        except ValueError as exc:
+            raise HTTPException(422, {"code": "schedule_validation", "message": str(exc)}) from None
+        if data is not None:
+            return ApiResponse(thread_id=tid, status="schedules", data=data)
+
+    intent_result_for(intent_state, msg)
     selected = intent_state["intent_result"]["rule_id"].removeprefix("model_tool:")
     previous = (get_thread_snapshot(tid).get("values") or {}) if body.thread_id else {}
     pending_schedule = previous.get("pending_schedule")
@@ -1478,6 +1495,18 @@ class SandboxSubmitRequest(BaseModel):
     facts: str = ""
 
 
+class CareBindRequest(BaseModel):
+    token: str
+    relation_label: str = "子女"
+
+
+class ModelConfigRequest(BaseModel):
+    base_url: str = ""
+    model: str = ""
+    api_key: str = ""
+    vendor: str = "custom"
+
+
 @system_scope()
 def _link_or_410(token: str, purpose: str) -> dict[str, Any]:
     from app.channels import links
@@ -1621,6 +1650,120 @@ def bind_page():
 @app.get("/sandbox", include_in_schema=False)
 def sandbox_page():
     return _versioned_page("sandbox.html")
+
+
+@app.get("/care", include_in_schema=False)
+def care_page():
+    return _versioned_page("care.html")
+
+
+# ----- Caregiver (子女) binding for the health companion -----
+
+
+@app.post("/api/care/invite")
+def api_care_invite(uid: str = Depends(require_user)) -> ApiResponse:
+    """Mint a one-time invite link for a family member to guard this account."""
+    from app.care import issue_invite
+
+    token, expires_at = issue_invite(uid)
+    url = f"{public_base_url()}/care?t={token}"
+    return ApiResponse(data={"token": token, "url": url, "expires_at": expires_at.isoformat()})
+
+
+@app.get("/api/care/link")
+def api_care_link_describe(t: str = Query(...)) -> dict[str, Any]:
+    """Describe a live invite for the confirmation page (no secrets)."""
+    from app.care import peek_invite
+
+    row = peek_invite(t)
+    if not row:
+        raise HTTPException(410, {"code": "link_invalid", "message": "邀请链接已失效，请让家人重新生成"})
+    with system_scope():
+        name = str((db.read_profile_data(row["recipient_id"]) or {}).get("name") or "")
+    masked = name[:1] + "**" if name else "家人"
+    return {"ok": True, "recipient_name": masked, "expires_at": row["expires_at"]}
+
+
+@app.post("/api/care/bind")
+def api_care_bind(body: CareBindRequest, uid: str = Depends(require_user)) -> dict[str, Any]:
+    """Confirm an invite: the browser session becomes the recipient's caregiver."""
+    from app.care import bind, consume_invite
+
+    recipient_id = consume_invite(body.token)
+    if not recipient_id:
+        raise HTTPException(410, {"code": "link_invalid", "message": "邀请链接已失效，请让家人重新生成"})
+    try:
+        rel = bind(uid, recipient_id, body.relation_label)
+    except ValueError as exc:
+        raise HTTPException(400, {"code": "bind_rejected", "message": str(exc)}) from exc
+    return {"ok": True, "status": "bound", "relationship": rel}
+
+
+@app.get("/api/care/relationships")
+def api_care_relationships(uid: str = Depends(require_user)) -> ApiResponse:
+    """List both directions: people I guard, and people who guard me."""
+    from app.care import list_relationships
+
+    return ApiResponse(data=list_relationships(uid))
+
+
+@app.get("/api/care/health/{recipient_id}")
+def api_care_health(recipient_id: str, uid: str = Depends(require_user)) -> ApiResponse:
+    """Read-only health snapshot, only for an authorized caregiver."""
+    from app.care import health_profile, is_caregiver_of
+
+    if not is_caregiver_of(uid, recipient_id):
+        raise HTTPException(404, {"code": "not_found", "message": "没有找到这条记录"})
+    return ApiResponse(data={"health": health_profile(recipient_id)})
+
+
+@app.delete("/api/care/{relationship_id}")
+def api_care_unbind(relationship_id: int, uid: str = Depends(require_user)) -> dict[str, Any]:
+    """Remove a relationship where the actor is either party."""
+    from app.care import unbind
+
+    if not unbind(relationship_id, uid):
+        raise HTTPException(404, {"code": "not_found", "message": "没有找到这条记录"})
+    return {"ok": True, "status": "removed"}
+
+
+# ----- Per-user model config (bring your own key) -----
+
+
+@app.get("/api/model/config")
+def api_model_config(uid: str = Depends(require_user)) -> ApiResponse:
+    """Safe status: has_key + masked key, never the raw key."""
+    from app import user_model
+
+    return ApiResponse(data=user_model.public_status(uid))
+
+
+@app.put("/api/model/config")
+def api_model_config_save(body: ModelConfigRequest, uid: str = Depends(require_user)) -> ApiResponse:
+    """Save the user's own OpenAI-compatible model config (key encrypted)."""
+    from app import user_model
+
+    try:
+        status = user_model.save_config(uid, body.base_url, body.model, body.api_key, body.vendor, verify=True)
+    except user_model.ModelConnectionError as exc:
+        raise HTTPException(400, {"code": "model_connection_failed", "message": str(exc)}) from None
+    except ValueError as exc:
+        raise HTTPException(400, {"code": "invalid_config", "message": str(exc)}) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, {"code": "vault_unavailable", "message": "密钥加密服务未配置或不可用，请联系管理员"}) from None
+    # Refresh the request-scoped spec so the next turn uses the new key.
+    user_model.set_current(user_model.build_spec(uid))
+    return ApiResponse(data=status)
+
+
+@app.delete("/api/model/config")
+def api_model_config_delete(uid: str = Depends(require_user)) -> dict[str, Any]:
+    """Remove the user's key; fall back to the operator-configured model."""
+    from app import user_model
+
+    user_model.delete_config(uid)
+    user_model.set_current(None)
+    return {"ok": True, "status": "removed"}
 
 
 # ----- Channel ingress: Feishu (long connection preferred; HTTP fallback) + WeChat (OpenClaw) -----

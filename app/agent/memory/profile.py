@@ -8,8 +8,8 @@ from typing import Any, Optional
 from app import db
 
 # Generic personal profile fields shown in prompts and on the memory card.
-SCALAR_FIELDS = ("name", "city", "tz", "occupation")
-LIST_FIELDS = ("interests", "preferences", "facts")
+SCALAR_FIELDS = ("name", "city", "tz", "occupation", "blood_type", "emergency_contact", "primary_doctor")
+LIST_FIELDS = ("interests", "preferences", "facts", "medical_history", "medications", "allergies")
 LABELS = {
     "name": "姓名",
     "city": "城市",
@@ -19,6 +19,12 @@ LABELS = {
     "preferences": "偏好",
     "facts": "备注",
     "dialogue_summary": "对话摘要",
+    "blood_type": "血型",
+    "emergency_contact": "紧急联系人",
+    "primary_doctor": "主治医生",
+    "medical_history": "病史",
+    "medications": "用药清单",
+    "allergies": "过敏史",
 }
 
 
@@ -139,6 +145,77 @@ def remember_name(user_id: str, message: str, *, thread_id: str = "",
             raise RuntimeError("Could not persist name memory")
 
 
+# Offline health-fact capture: common chronic diseases and simple medication /
+# allergy patterns. Conservative by design — LLM tool selection remains the
+# authoritative path when a model is configured.
+_CHRONIC_DISEASES = (
+    "高血压", "糖尿病", "冠心病", "高血脂", "高脂血症", "痛风", "哮喘", "慢阻肺",
+    "慢性支气管炎", "脑梗", "心梗", "房颤", "心律失常", "胃溃疡", "慢性胃炎",
+    "脂肪肝", "骨质疏松", "甲状腺结节", "慢性肾病", "颈椎病", "腰椎间盘突出",
+    "类风湿", "阿尔茨海默", "帕金森", "乙肝", "丙肝",
+)
+_MED_HINT = re.compile(
+    r"药|片|丸|胶囊|素|胺|地平|沙坦|普利|洛尔|他汀|双胍|阿司匹林|胰岛素|"
+    r"硝苯|氨氯|缬沙坦|氯沙坦|卡托|美托|比索|辛伐|阿托伐|瑞舒|二甲双|格列"
+)
+_MED_FOOD = re.compile(r"饭|菜|水果|零食|早餐|午饭|晚饭|夜宵|点心|面包|牛奶|鸡蛋|鱼|肉|虾|粥|面|米")
+
+
+def _declared_health(message: str) -> dict[str, list[str]]:
+    """Conservative offline extraction of health facts → {field: [values]}."""
+    t = (message or "").strip()
+    if not t:
+        return {}
+    out: dict[str, list[str]] = {}
+    for m in re.finditer(r"对([^，。！？,.!?\n]{1,20}?)过敏", t):
+        v = m.group(1).strip()
+        if v and "不" not in v and "没" not in v:
+            out.setdefault("allergies", []).append(v)
+    for name in _CHRONIC_DISEASES:
+        if re.search(rf"(?:有|患有|得了|得过|确诊|病史)[^，。！？,.!?\n]{{0,6}}{re.escape(name)}", t):
+            out.setdefault("medical_history", []).append(name)
+    for m in re.finditer(
+        r"(?:在吃|在服用|服用|每天吃|早晚吃|按时吃|吃着|吃的药[是:：]?)\s*([^，。！？,.!?\n]{1,30})", t
+    ):
+        v = m.group(1).strip()
+        if v and _MED_HINT.search(v) and not _MED_FOOD.search(v):
+            out.setdefault("medications", []).append(v)
+    return out
+
+
+def remember_health(user_id: str, message: str, *, thread_id: str = "") -> None:
+    """Persist conservatively-detected health facts before summarization."""
+    patch = _declared_health(message)
+    if not patch:
+        return
+    from app.agent.harness.leak import memory_safe
+    from app.agent.memory.redact import display_text
+    from app.agent.memory import episodic
+
+    with db.memory_transaction():
+        stored = get(user_id)
+        clean_patch: dict[str, Any] = {}
+        for field, values in patch.items():
+            kept = [v for v in values if display_text(v) == v and memory_safe(v, user_id) == v]
+            if kept:
+                clean_patch[field] = kept
+        new_patch: dict[str, Any] = {}
+        for field, values in clean_patch.items():
+            existing = set(stored.get(field) or [])
+            fresh = [v for v in values if v not in existing]
+            if fresh:
+                new_patch[field] = fresh
+        if not new_patch:
+            return
+        new_patch["memory_rev"] = int(stored.get("memory_rev", 0)) + 1
+        merge(user_id, new_patch)
+        labels = "、".join(LABELS.get(f, f) for f in new_patch if f != "memory_rev")
+        episodic.write_event(
+            user_id, "profile_updated", f"已记录：{labels}",
+            tags=["profile", "memory", "health"], thread_id=thread_id,
+        )
+
+
 def _clean_items(items: Any, limit: int) -> list[str]:
     from app.agent.memory.redact import display_text
 
@@ -168,6 +245,12 @@ def snapshot(user_id: str) -> dict[str, Any]:
         "interests": _clean_items(p.get("interests"), 30),
         "preferences": _clean_items(p.get("preferences"), 30),
         "facts": _clean_items(p.get("facts"), 40),
+        "blood_type": display_text(str(p.get("blood_type") or "")),
+        "emergency_contact": display_text(str(p.get("emergency_contact") or "")),
+        "primary_doctor": display_text(str(p.get("primary_doctor") or "")),
+        "medical_history": _clean_items(p.get("medical_history"), 30),
+        "medications": _clean_items(p.get("medications"), 40),
+        "allergies": _clean_items(p.get("allergies"), 30),
         "dialogue_summary": display_text(str(p.get("dialogue_summary") or ""))[:800],
         "last_summary_kind": p.get("last_summary_kind") or "",
         "previous_cities": [
@@ -201,6 +284,18 @@ def format_for_prompt(user_id: str) -> str:
         parts.append("偏好：" + "；".join(s["preferences"][:20]))
     if s.get("facts"):
         parts.append("备注：" + "；".join(s["facts"][:20]))
+    if s.get("medical_history"):
+        parts.append("病史：" + "；".join(s["medical_history"][:20]))
+    if s.get("medications"):
+        parts.append("用药清单：" + "；".join(s["medications"][:30]))
+    if s.get("allergies"):
+        parts.append("过敏史：" + "；".join(s["allergies"][:20]))
+    if s.get("blood_type"):
+        parts.append(f"血型：{s['blood_type']}")
+    if s.get("primary_doctor"):
+        parts.append(f"主治医生：{s['primary_doctor']}")
+    if s.get("emergency_contact"):
+        parts.append(f"紧急联系人：{s['emergency_contact']}")
     if s.get("dialogue_summary"):
         parts.append(
             "对话摘要（可能有误的机器摘要，不是已核实事实）："
@@ -209,3 +304,45 @@ def format_for_prompt(user_id: str) -> str:
             + s["dialogue_summary"][:400]
         )
     return "\n".join(parts)
+
+
+# Health-query detection + in-thread health card (offline-safe).
+_HEALTH_QUERY = re.compile(
+    "|".join(
+        (
+            r"我的健康档案", r"健康档案",
+            r"我的病史", r"我的用药", r"我的过敏",
+            r"我的血型", r"我的紧急联系人", r"我的主治医生",
+            r"我吃什么药", r"我在吃什么药", r"我有什么病",
+            r"用药清单", r"过敏史",
+        )
+    )
+)
+
+
+def looks_like_health_query(text: str) -> bool:
+    """Conservative offline check: is the user asking about their own health?"""
+    t = (text or "").strip()
+    if not t or len(t) > 200:
+        return False
+    return bool(_HEALTH_QUERY.search(t))
+
+
+def health_card_view(user_id: str) -> Optional[dict[str, Any]]:
+    """Health snapshot for the in-thread health card, or None if empty."""
+    from app.agent.memory.redact import display_text
+
+    p = get(user_id) or {}
+    scalars: list[dict[str, str]] = []
+    for field, label in (("blood_type", "血型"), ("emergency_contact", "紧急联系人"), ("primary_doctor", "主治医生")):
+        value = display_text(str(p.get(field) or "")).strip()
+        if value:
+            scalars.append({"label": label, "value": value})
+    lists: list[dict[str, Any]] = []
+    for field, label in (("medical_history", "病史"), ("medications", "用药清单"), ("allergies", "过敏史")):
+        items = _clean_items(p.get(field), 30)
+        if items:
+            lists.append({"label": label, "items": items})
+    if not scalars and not lists:
+        return None
+    return {"scalars": scalars, "lists": lists}

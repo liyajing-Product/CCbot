@@ -1,4 +1,4 @@
-"""办公助理 agent core: router, tool registry, subgraphs, memory, loop, harness."""
+"""Health House core: router, tool registry, subgraphs, memory, loop, harness."""
 
 from __future__ import annotations
 

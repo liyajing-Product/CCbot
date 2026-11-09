@@ -1,17 +1,33 @@
 import { $, h, toast } from "./core.js?v=__APP_VERSION__";
 import { api, friendlyError } from "./api.js?v=__APP_VERSION__";
 
-const KINDS = { one_shot_reminder: "一次性提醒", custom_nl: "自定义指令" };
+const KINDS = { medication: "用药提醒", one_shot_reminder: "一次性提醒", custom_nl: "自定义指令" };
 const kindLabel = (kind) => KINDS[kind] || "定时任务";
 const STATES = { active: "已启用", paused: "已冻结", paused_idle: "14 天未活跃，已暂停", completed: "已完成", deleted: "已删除" };
 const stateLabel = (s) => s.paused_by_idle ? STATES.paused_idle : STATES[s.status];
 const deliveryLabel = (s) => s.delivery.includes("email") ? "站内提醒 + 邮件（未配置时跳过）" : s.delivery === "in_app" ? "仅站内提醒" : "站内提醒；有绑定时尝试渠道推送";
 const RESULTS = { running: "运行中", success: "成功", failed: "失败" };
 let panel, body, generation = 0;
+let defaultTimezone = "Asia/Shanghai";
+let schedulerState = null;
 const button = (text, onClick, cls = "btn btn-ghost btn-sm") => h("button", { type: "button", class: cls, text, onClick });
 const date = (value, tz) => value ? new Intl.DateTimeFormat("zh-CN", { timeZone: tz, dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—";
-const summary = (s) => s.trigger.type === "cron" ? `定时 ${s.trigger.expr} · ${s.tz}` : s.trigger.type === "interval" ? `每 ${s.trigger.every_seconds} 秒 · ${s.tz}` : `一次性 · ${localValue(s.trigger.run_at || "", s.tz).replace("T", " ")} · ${s.tz}`;
+const summary = (s) => {
+  if (s.trigger.type === "cron") {
+    const parts = s.trigger.expr.split(/\s+/);
+    if (parts.length === 5 && /^\d+$/.test(parts[0]) && /^\d+(,\d+)*$/.test(parts[1]) && parts.slice(2).every(value => value === "*")) {
+      const times = parts[1].split(",").map(hour => `${hour.padStart(2, "0")}:${parts[0].padStart(2, "0")}`).join("、");
+      return `每天 ${times} · ${s.tz}`;
+    }
+    return `定时 ${s.trigger.expr} · ${s.tz}`;
+  }
+  return s.trigger.type === "interval" ? `每 ${s.trigger.every_seconds} 秒 · ${s.tz}` : `一次性 · ${localValue(s.trigger.run_at || "", s.tz).replace("T", " ")} · ${s.tz}`;
+};
 const errorText = (err) => err.status === 422 ? err.message : friendlyError(err).text;
+const setView = (title, view) => {
+  $("schedulesTitle").textContent = title;
+  body.className = `drawer-body schedule-view-${view}`;
+};
 
 export function initSchedules() {
   panel = $("schedulesPanel");
@@ -19,7 +35,7 @@ export function initSchedules() {
   $("btnSchedules").addEventListener("click", () => {
     panel.showModal();
     $("btnSchedules").setAttribute("aria-expanded", "true");
-    loadList();
+    return loadList();
   });
   $("btnSchedulesClose").addEventListener("click", () => panel.close());
   panel.addEventListener("close", () => {
@@ -28,23 +44,38 @@ export function initSchedules() {
     $("btnSchedules").setAttribute("aria-expanded", "false");
     $("btnSchedules").focus();
   });
-  panel.addEventListener("click", (e) => { if (e.target === panel) panel.close(); });
+  panel.addEventListener("click", (e) => {
+    // Native dialogs can target the dialog itself when a user clicks its padding.
+    // Only a click outside the drawer's bounds should dismiss it.
+    if (e.target !== panel) return;
+    const bounds = panel.getBoundingClientRect();
+    if (e.clientX < bounds.left || e.clientX > bounds.right || e.clientY < bounds.top || e.clientY > bounds.bottom) panel.close();
+  });
 }
 
 async function loadList() {
   const ticket = ++generation;
-  body.replaceChildren(h("p", { class: "dw-empty", text: "正在读取定时任务…" }));
+  setView("用药与日程", "list");
+  body.replaceChildren(h("p", { class: "dw-empty", role: "status", text: "正在读取日程…" }));
   try {
     const res = await api.schedules();
     if (ticket !== generation) return;
     body.replaceChildren();
-    const { schedules, stats } = res.data;
-    body.append(h("p", { class: "dw-note", text: `累计运行 ${stats.run_count} 次 · 成功 ${stats.success_count} · 失败 ${stats.fail_count}` }));
-    if (!schedules.length) body.append(h("p", { class: "dw-empty", text: "还没有定时任务。试着在聊天里说「明天下午三点提醒我交报告」，或「每天早上八点帮我看看今天有什么安排」。核对确认卡后就会创建。" }));
+    defaultTimezone = res.data.tz || "Asia/Shanghai";
+    schedulerState = res.data.scheduler || null;
+    const { schedules } = res.data;
+    if (schedules.length) body.append(h("div", { class: "schedule-list-toolbar" }, [button("新建提醒", () => openScheduleCreate(), "btn btn-primary")]));
+    appendSchedulerNotice();
+    if (!schedules.length) body.append(h("section", { class: "schedule-empty", "aria-label": "暂无日程" }, [
+      h("img", { src: "/static/images/capsule-schedule-empty.svg", alt: "", width: "240", height: "220", "aria-hidden": "true" }),
+      h("p", { text: "阿哦～您还有没有建立日程，暂无日程信息" }),
+      button("新建提醒", () => openScheduleCreate(), "btn btn-primary"),
+    ]));
     for (const s of schedules) {
       body.append(h("button", { type: "button", class: "schedule-row", onClick: () => loadDetail(s.id) }, [
         h("span", { class: "schedule-row-head" }, [h("strong", { text: s.name }), h("span", { class: "badge", text: stateLabel(s) })]),
         h("span", { text: kindLabel(s.job_kind) }),
+        h("span", { text: summary(s) }),
         h("span", { text: `下次：${date(s.next_run_at, s.tz)} · ${s.tz}` }),
         h("span", { class: "dw-note", text: `运行次数 ${s.run_count} · 上次 ${RESULTS[s.last_status] || "尚未运行"}` }),
       ]));
@@ -53,6 +84,125 @@ async function loadList() {
     if (ticket !== generation) return;
     body.replaceChildren(h("p", { role: "alert", text: errorText(err) }), button("重试", loadList));
   }
+}
+
+function appendSchedulerNotice() {
+  if (schedulerState && (!schedulerState.enabled || !schedulerState.alive)) {
+    body.append(h("p", { class: "schedule-notice", role: "status", text: "自动提醒服务当前未运行。可以保存提醒，但暂时不会到点执行，请联系管理员开启。" }));
+  }
+}
+
+export async function openScheduleCreate() {
+  if (!panel.open) panel.showModal();
+  $("btnSchedules").setAttribute("aria-expanded", "true");
+  const ticket = ++generation;
+  setView("新建提醒", "create");
+  body.replaceChildren(h("p", { text: "正在准备新建提醒…" }));
+  try {
+    const res = await api.schedules();
+    if (ticket !== generation) return;
+    defaultTimezone = res.data.tz || "Asia/Shanghai";
+    schedulerState = res.data.scheduler || null;
+    renderCreate();
+  } catch (err) {
+    if (ticket === generation) body.replaceChildren(h("p", { role: "alert", text: errorText(err) }), button("重试", openScheduleCreate));
+  }
+}
+
+function renderCreate() {
+  setView("新建提醒", "create");
+  const form = h("form", { class: "schedule-form schedule-create" });
+  const field = (label, input) => {
+    const row = h("label", {}, [h("span", { text: label }), input]);
+    form.append(row);
+    return row;
+  };
+  const kind = h("select", { "aria-label": "提醒类型" }, [
+    h("option", { value: "medication", text: "每日用药提醒" }),
+    h("option", { value: "one_shot_reminder", text: "日程提醒（一次性）" }),
+  ]);
+  kind.value = "medication";
+  field("提醒类型", kind);
+  const name = h("input", { required: true, maxlength: 256, placeholder: "填写药品名或日程名称", "aria-label": "提醒名称" });
+  field("提醒名称", name);
+  const time = h("input", { type: "time", required: true, "aria-label": "每日提醒时间" });
+  const timeRow = field("每日提醒时间", time);
+  const once = h("input", { type: "datetime-local", "aria-label": "日程日期和时间" });
+  const onceRow = field("日程日期和时间", once);
+  onceRow.hidden = true;
+  const tz = h("input", { value: defaultTimezone, required: true, "aria-label": "提醒时区" });
+  field("时区", tz);
+  const prompt = h("textarea", { rows: 2, maxlength: 4000, placeholder: "可填写备注；用药名称与剂量请遵循医嘱", "aria-label": "提醒内容" });
+  field("提醒内容（用药提醒可选）", prompt);
+  const delivery = h("select", { "aria-label": "推送方式" }, [
+    h("option", { value: "in_app", text: "仅站内提醒" }),
+    h("option", { value: "both", text: "站内 + 已绑定渠道" }),
+  ]);
+  delivery.value = "in_app";
+  field("推送方式", delivery);
+  kind.addEventListener("change", () => {
+    const medication = kind.value === "medication";
+    timeRow.hidden = !medication;
+    time.required = medication;
+    onceRow.hidden = medication;
+    once.required = !medication;
+  });
+  const status = h("p", { class: "schedule-error", role: "alert" });
+  const submit = h("button", { type: "submit", class: "btn btn-primary", text: "下一步：核对提醒" });
+  form.append(submit, status);
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (submit.disabled) return;
+    const title = name.value.trim();
+    if (!title) { status.textContent = "请填写提醒名称。"; return; }
+    let trigger;
+    if (kind.value === "medication") {
+      if (!/^\d{2}:\d{2}$/.test(time.value)) { status.textContent = "请选择每日提醒时间。"; return; }
+      const [hour, minute] = time.value.split(":").map(Number);
+      trigger = { type: "cron", expr: `${minute} ${hour} * * *` };
+    } else {
+      if (!once.value) { status.textContent = "请选择日程日期和时间。"; return; }
+      trigger = { type: "once", run_at: once.value };
+    }
+    const payload = { name: title, job_kind: kind.value, trigger, tz: tz.value.trim(),
+      prompt_text: prompt.value.trim() || (kind.value === "medication" ? `用药提醒：${title}。请按医嘱用药。` : title),
+      delivery: delivery.value };
+    const ticket = generation;
+    submit.disabled = true;
+    status.textContent = "正在生成确认卡…";
+    try {
+      const res = await api.proposeSchedule(payload);
+      if (ticket !== generation) return;
+      const entry = { data: { proposal: res.data.proposal } };
+      const card = scheduleConfirmCard(entry, { save() {}, onDecision: async decision => {
+        toast(decision === "confirmed" ? "提醒已创建" : "已取消创建");
+        await loadList();
+      } });
+      const edit = button("", () => {
+        generation++;
+        status.textContent = "";
+        setView("新建提醒", "create");
+        body.replaceChildren();
+        appendSchedulerNotice();
+        body.append(form);
+        name.focus();
+      }, "btn-icon schedule-confirm-edit");
+      edit.setAttribute("aria-label", "修改提醒");
+      edit.setAttribute("title", "修改提醒");
+      edit.append(h("img", { src: "/static/images/schedule-edit.svg", alt: "", "aria-hidden": "true", width: "22", height: "22" }));
+      card.append(edit);
+      setView("核对提醒", "confirm");
+      body.replaceChildren(card);
+    } catch (err) {
+      if (ticket === generation) status.textContent = errorText(err);
+    } finally {
+      submit.disabled = false;
+    }
+  });
+  body.replaceChildren();
+  appendSchedulerNotice();
+  body.append(form);
+  name.focus();
 }
 
 function localValue(value, tz) {
@@ -64,6 +214,7 @@ function localValue(value, tz) {
 
 async function loadDetail(id) {
   const ticket = ++generation;
+  setView("提醒详情", "detail");
   body.replaceChildren(h("p", { class: "dw-empty", text: "正在读取详情…" }));
   try {
     const [res, history] = await Promise.all([api.schedule(id), api.scheduleRuns(id)]);
@@ -154,6 +305,7 @@ export function scheduleConfirmCard(entry, ctx) {
         entry.data.decision = res.data.status;
         ctx.save(entry);
         render();
+        if (ctx.onDecision) await ctx.onDecision(entry.data.decision);
       } catch (err) { status.textContent = errorText(err); for (const btn of actions.children) btn.disabled = false; }
     }, confirmed ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"));
   };

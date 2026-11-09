@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="robots" content="noindex" />
+  <title>家人守护 · 康伴</title>
+  <link rel="stylesheet" href="/static/design.css?v=__APP_VERSION__" />
+  <style>
+    body.app { align-items: center; padding: clamp(32px, 8vh, 80px) 16px; }
+    .panel { width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 28px; }
+    h1 { font-size: 28px; font-weight: 600; line-height: 1.21; margin: 0 0 16px; }
+    p { color: var(--text-secondary); line-height: 1.6; margin: 0 0 16px; }
+    .field-label { display: block; font-size: 13px; font-weight: 500; margin: 0 0 6px; color: var(--text); }
+    .field-input { width: 100%; box-sizing: border-box; margin-bottom: 16px; }
+    .btn { width: 100%; margin-top: 8px; }
+    .msg { margin-top: 16px; font-size: 14px; line-height: 1.6; }
+    .msg.err { color: var(--error-text); }
+    .msg.ok { color: var(--success-text); }
+    .note { font-size: 12px; color: var(--text-tertiary); margin-top: 18px; }
+  </style>
+</head>
+<body class="app">
+  <main class="panel">
+    <h1>家人守护</h1>
+    <p id="intro">正在检查邀请链接…</p>
+    <label class="field-label" for="relation" hidden id="relationLabel">你和对方的关系</label>
+    <input class="field-input" id="relation" value="子女" hidden placeholder="比如：女儿、儿子、儿媳…" />
+    <button class="btn btn-primary" type="button" id="submit" hidden>确认守护</button>
+    <div class="msg" id="msg" role="status" aria-live="polite"></div>
+    <p class="note">确认后，你将能看到对方的健康档案（用药、病史、过敏史、紧急联系人），并在突发状况时收到提醒。你随时可以在档案页解除守护。</p>
+  </main>
+  <script>
+    const token = new URLSearchParams(location.search).get("t") || "";
+    const $ = (id) => document.getElementById(id);
+    const show = (text, kind) => { $("msg").textContent = text; $("msg").className = "msg " + (kind || ""); };
+    const errText = (data, fallback) => {
+      const d = data && data.detail;
+      return (d && (d.message || (typeof d === "string" ? d : ""))) || fallback;
+    };
+
+    async function init() {
+      if (!token) { $("intro").textContent = "链接不完整，请让家人重新生成守护邀请。"; return; }
+      const r = await fetch(`/api/care/link?t=${encodeURIComponent(token)}`);
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) { $("intro").textContent = errText(data, "邀请链接已失效，请让家人重新生成。"); return; }
+      // Reuse this browser's session so the caregiver has their own identity.
+      const s = await fetch("/api/session", { method: "POST" });
+      if (!s.ok) { $("intro").textContent = "暂时无法建立会话，请稍后刷新重试。"; return; }
+      $("intro").textContent = `确认后，你将守护 ${data.recipient_name || "家人"} 的健康档案。`;
+      $("relationLabel").hidden = false;
+      $("relation").hidden = false;
+      $("submit").hidden = false;
+    }
+
+    $("submit").addEventListener("click", async () => {
+      $("submit").disabled = true;
+      show("正在建立守护关系…");
+      try {
+        const r = await fetch("/api/care/bind", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, relation_label: $("relation").value || "子女" }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) { show(errText(data, "绑定失败，请重试"), "err"); $("submit").disabled = false; return; }
+        $("submit").hidden = true;
+        $("relationLabel").hidden = true;
+        $("relation").hidden = true;
+        $("intro").textContent = "守护关系已建立。";
+        show("绑定成功！现在可以到自己的档案页「家人守护」里查看对方的健康档案了。", "ok");
+      } catch (e) {
+        show("网络异常，请重试", "err");
+        $("submit").disabled = false;
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

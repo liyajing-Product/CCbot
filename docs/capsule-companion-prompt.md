@@ -1,0 +1,9 @@
+# 首页胶囊伙伴素材
+
+- 生成方式：内置 imagegen 工具，透明背景。
+- 页面素材：`static/images/capsule-companion-wave.png`，1774 × 887，4 列 × 2 行。
+- 展示：CSS 按帧播放，两次招手后暂停；减少动态效果时保留首帧。
+
+## 最终生成提示词
+
+Create a production-ready transparent PNG animation sprite atlas for an original healthcare website mascot. EXACT layout: 4 columns x 2 rows, EIGHT equal SQUARE cells, on a transparent background. Each cell contains the SAME full-body mascot at exactly the same scale, center, and foot baseline, with generous padding; no text, no labels, no grid lines. Character: a charming premium 3D designer vinyl capsule / pill character, elongated round capsule silhouette, mint green upper half (brand #3ABA8A), warm ivory lower half, big expressive glossy charcoal eyes, tiny gentle smile, subtly raised soft white eyebrows, small mitten hands and short round feet. Slight soft-touch toy material with delicate realistic studio lighting and ambient shading. Sophisticated collectible figurine, not a flat vector illustration. Inspired by soft 3D scientist toys but ORIGINAL: NO cat ears, no cat face, no fur hair, no lab flask, no necktie. A small subtle embossed plus symbol on the mint cap. Front-facing slight three-quarter stance, welcoming and reassuring. Left arm rests near side. Right arm raised beside head, actively WAVING HELLO. Eight consecutive animation poses in reading order: right mitten tilted outward, more outward, extreme outward, middle, inward, extreme inward, middle, outward. ONLY the raised forearm and hand vary; body, facial expression, other arm and feet remain IDENTICAL. Shoulder stays anchored, hand never covers face. Smooth cyclic waving sequence. Transparent areas around each character, absolutely no background scene or floor. Frame all eight entire characters with no cropping. Atlas designed to be displayed as a single animated character using CSS background positions.

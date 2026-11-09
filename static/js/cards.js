@@ -411,3 +411,47 @@ export function memoryCard(entry, ctx) {
   paint();
   return root;
 }
+
+/* ---------------- Health card ---------------- */
+
+export function healthCard(entry, ctx) {
+  const d = entry.data || {};
+  const card = d.card || {};
+  const { root } = cardShell("health", {
+    title: "健康档案",
+    tags: [tag("健康", "tag-amber")],
+    restored: ctx.restored,
+    label: "健康档案",
+  });
+  const body = h("div", { class: "cc-body" });
+  root.append(body);
+
+  const scalars = card.scalars || [];
+  const lists = card.lists || [];
+  if (!scalars.length && !lists.length) {
+    body.append(h("p", { class: "card-note", text: "还没有健康档案。告诉我你的病史、用药、过敏史，我会记下来。" }));
+    return root;
+  }
+  if (scalars.length) {
+    body.append(h("div", { class: "mem-group" }, [
+      h("p", { class: "mem-group-label", text: "基本信息" }),
+      h("ul", { class: "health-list" }, scalars.map((s) =>
+        h("li", { class: "health-row" }, [
+          h("span", { class: "health-k", text: s.label }),
+          h("span", { class: "health-v", text: s.value }),
+        ])
+      )),
+    ]));
+  }
+  if (lists.length) {
+    body.append(h("div", { class: "mem-group" }, [
+      h("p", { class: "mem-group-label", text: "健康记录" }),
+      ...lists.map((g) => h("div", { class: "health-group" }, [
+        h("p", { class: "health-group-label", text: g.label }),
+        h("ul", { class: "mem-list" }, (g.items || []).map((t) => h("li", { text: t }))),
+      ])),
+    ]));
+  }
+  body.append(h("p", { class: "card-note", text: "在右上角「档案」里可以修改或补充。" }));
+  return root;
+}

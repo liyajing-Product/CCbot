@@ -238,6 +238,9 @@ def route(task: str, **_: Any) -> ModelTier:
 def has_llm(tier: Optional[ModelTier] = None, task: str = "") -> bool:
     if _override is not None:
         return True
+    from app import user_model
+    if user_model.get_current() is not None:
+        return True
     cfg = get_config()
     if task:
         return any(s.has_key() for s in cfg.task_chain(task, (tier or route(task)).value))

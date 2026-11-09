@@ -14,7 +14,9 @@ from app.data_access import memory_migration as store
 from app.gateway import embeddings
 
 log = logging.getLogger(__name__)
-PROFILE_FIELDS = ("name", "city", "occupation", "interests", "preferences", "facts")
+PROFILE_FIELDS = ("name", "city", "occupation", "interests", "preferences", "facts",
+                  "blood_type", "emergency_contact", "primary_doctor",
+                  "medical_history", "medications", "allergies")
 
 
 def normalize(text):

@@ -8,10 +8,10 @@ from app import db
 from app.data_access import NotFound
 from app.data_access.session import SessionLocal
 from .models import Schedule, ScheduleRun, ScheduleProposal, now
-from .triggers import next_run, utc
+from .triggers import next_run, utc, zone
 
 LOCK = threading.RLock()
-KINDS = {"one_shot_reminder": "一次性提醒", "custom_nl": "自定义指令"}
+KINDS = {"one_shot_reminder": "一次性提醒", "custom_nl": "自定义指令", "medication": "用药提醒"}
 FIELDS = {"name", "job_kind", "trigger", "tz", "prompt_text", "delivery", "channel_preference", "max_runs", "enabled"}
 
 
@@ -61,12 +61,25 @@ def runs(uid, sid, limit=30):
         return [serialize(r) for r in session.scalars(select(ScheduleRun).where(ScheduleRun.schedule_id == sid, ScheduleRun.user_id == uid).order_by(ScheduleRun.id.desc()).limit(max(1, min(limit, 100))))]
 
 
+def default_timezone(uid):
+    """Use a valid profile timezone; legacy free-text values must not block reminders."""
+    from app.agent.proactive.config import get_config
+    for candidate in ((db.get_profile(uid) or {}).get('tz'), get_config().tz, 'Asia/Shanghai'):
+        if candidate:
+            try:
+                zone(candidate)
+                return candidate
+            except ValueError:
+                pass
+    return 'Asia/Shanghai'
+
+
 def validate(uid, patch, existing=None, at=None):
     if not isinstance(patch, dict) or set(patch) - FIELDS:
         raise ValueError("包含不支持的定时任务字段")
     data = {k: v for k, v in (existing or {}).items() if k in FIELDS}
     data.update(patch)
-    data.setdefault('tz', (db.get_profile(uid) or {}).get('tz') or 'Asia/Shanghai')
+    data.setdefault('tz', default_timezone(uid))
     data.setdefault('delivery', 'both')
     data.setdefault('channel_preference', 'auto')
     data.setdefault('enabled', True)
@@ -100,6 +113,8 @@ def validate(uid, patch, existing=None, at=None):
     nxt = next_run(trigger, data['tz'], instant)
     if data['job_kind'] == 'one_shot_reminder' and (trigger.get('type') != 'once' or not data['prompt_text'].strip()):
         raise ValueError("一次性提醒需要明确时间和提醒内容")
+    if data['job_kind'] == 'medication' and (not isinstance(trigger, dict) or trigger.get('type') != 'cron' or not data['prompt_text'].strip()):
+        raise ValueError("用药提醒需要明确的服药时间和提醒内容")
     if trigger.get('tz') and trigger['tz'] != data['tz']:
         raise ValueError("触发器时区与任务时区必须一致")
     changed_time = not existing or bool({'trigger', 'tz'} & patch.keys())

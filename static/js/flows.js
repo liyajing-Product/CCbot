@@ -1,5 +1,5 @@
 import { currentUserId } from "./identity.js?v=__APP_VERSION__";
-import { scheduleConfirmCard } from "./schedules.js?v=__APP_VERSION__";
+import { scheduleConfirmCard, openScheduleCreate } from "./schedules.js?v=__APP_VERSION__";
 import { DEBUG, nextId, announce, toast, parseTime, debugBlock } from "./core.js?v=__APP_VERSION__";
 import { api, friendlyError, debugText } from "./api.js?v=__APP_VERSION__";
 import { store } from "./store.js?v=__APP_VERSION__";
@@ -23,6 +23,7 @@ import {
   askCard,
   secretCard,
   memoryCard,
+  healthCard,
 } from "./cards.js?v=__APP_VERSION__";
 import { openSecretSandbox } from "./secret.js?v=__APP_VERSION__";
 import { confirmCard, draftFromResponse } from "./confirm.js?v=__APP_VERSION__";
@@ -46,6 +47,7 @@ const CARDS = {
   ask: askCard,
   secret: secretCard,
   memory: memoryCard,
+  health: healthCard,
 };
 
 function contextFor(entry, restored) {
@@ -307,6 +309,7 @@ function handleChat(res, owner, revision) {
   if (ask) emitAsk(ask, reply);
   if (data.schedule_proposal) emit("schedule_confirm", { proposal: data.schedule_proposal });
   if (data.continue_card) emitContinue(data.continue_card, res.thread_id);
+  if (data.health_card) emit("health", { card: data.health_card });
 }
 
 /* ---------------- Draft → confirm card ---------------- */
@@ -577,7 +580,15 @@ if (typeof window !== "undefined") window.addEventListener("profile-updated", ()
   displayRevision++;
 });
 
+let proactiveLoading = false;
 export async function loadProactive() {
+  if (proactiveLoading) return;
+  proactiveLoading = true;
+  try { await refreshProactive(); }
+  finally { proactiveLoading = false; }
+}
+
+async function refreshProactive() {
   const owner = currentUserId();
   let items = [];
   try {
@@ -665,5 +676,6 @@ export function showHero() {
   renderHero({
     onChip: (text) => sendComposer({ text }),
     onMemory: () => askMemory(),
+    onMedication: () => openScheduleCreate(),
   });
 }

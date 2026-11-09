@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""办公助理 agent connectivity checklist — PASS/FAIL, never prints secrets.
+"""Health House connectivity checklist — PASS/FAIL, never prints secrets.
 
 Checks (against local uvicorn by default):
   1) /health (LLM, Feishu, OpenClaw, feishu_ws)

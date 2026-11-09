@@ -63,8 +63,13 @@ class ModelSpec:
     rpm: Optional[int] = None
     # Legacy specs resolve their key through app.llm.resolve_tier(tier).
     legacy_tier: str = ""
+    # Literal key for per-user "bring your own key" specs. Never printed, hashed
+    # or compared; the value is resolved at request time from the user's vault.
+    _literal_api_key: str = field(default="", repr=False, hash=False, compare=False)
 
     def api_key(self) -> str:
+        if self._literal_api_key:
+            return self._literal_api_key
         if self.legacy_tier:
             from app.llm import ModelTier, resolve_tier
 

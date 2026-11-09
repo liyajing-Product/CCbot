@@ -1,4 +1,4 @@
-/* CCbot · Pillio-style design tokens (orange #F4622A) */
+/* Health House · brand #3ABA8A and shared interface tokens. */
 
 @font-face {
   font-family: "Geist";
@@ -40,20 +40,20 @@
   --text-placeholder: #9ca3af;
   --text-inverse: #ffffff;
   --text-inverse-muted: #e5e7eb;
-  --text-on-accent: #ffffff;
+  --text-on-accent: #0b3327;
 
-  --accent: #f4622a;
-  --accent-hover: #e0541d;
-  --accent-soft: #fdebe2;
-  --accent-soft-2: #fad9c8;
-  --accent-ring: #f4622a;
-  --focus-ring: #f4622a;
+  --accent: #3aba8a;
+  --accent-hover: #2ba477;
+  --accent-soft: #e8f7f0;
+  --accent-soft-2: #cceede;
+  --accent-ring: #3aba8a;
+  --focus-ring: #3aba8a;
 
-  --blue: #f4622a;
-  --blue-deep: #c74a16;
-  --blue-soft: #fdebe2;
-  --link: #f4622a;
-  --link-hover: #c74a16;
+  --blue: #3aba8a;
+  --blue-deep: #177453;
+  --blue-soft: #e8f7f0;
+  --link: #177453;
+  --link-hover: #177453;
 
   --amber: #f59e0b;
   --amber-deep: #b45309;

@@ -496,7 +496,7 @@ const friendlyError = err => ({text: err.message});
 })();
 """
     page = tmp_path / 'panel.html'
-    page.write_text('<!doctype html><meta charset="utf-8"><div id="schedulesBody"></div>'
+    page.write_text('<!doctype html><meta charset="utf-8"><h2 id="schedulesTitle"></h2><div id="schedulesBody"></div>'
                     '<pre id="result">PENDING</pre><script>' + '\n'.join(sources) + script + '</script>')
     result = subprocess.run([browser, '--headless', '--no-sandbox', '--disable-gpu',
                              '--disable-background-networking', '--no-first-run',

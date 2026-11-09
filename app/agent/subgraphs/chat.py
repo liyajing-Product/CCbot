@@ -188,7 +188,7 @@ def node_chat(state: AgentState) -> dict[str, Any]:
             system = system + "\n\n" + saved
     if not crisis:
         from app import db
-        from app.agent.memory.profile import remember_name
+        from app.agent.memory.profile import remember_health, remember_name
         from app.agent.context_assembler import conversation_state
 
         with db.memory_transaction():
@@ -196,10 +196,22 @@ def node_chat(state: AgentState) -> dict[str, Any]:
             turns = conversation["turns"]
             remember_name(uid, msg, thread_id=tid,
                           previous_turn=turns[-1] if turns else None)
+            remember_health(uid, msg, thread_id=tid)
             # Only carry context validated before this name update across
             # its revision bump. Other invalidations still discard history.
             conversation["memory_rev"] = int(db.get_profile(uid).get("memory_rev", 0))
         state = {**state, "conversation_context": conversation}
+        from app.agent.memory.profile import health_card_view, looks_like_health_query
+        if looks_like_health_query(msg):
+            card = health_card_view(uid)
+            if card:
+                reply = "这是你记下的健康档案："
+                return {
+                    "conversation_context": record_turn(state, msg, reply),
+                    "profile": load_profile(state),
+                    "messages": [{"role": "assistant", "content": reply}],
+                    "health_card": card,
+                }
     mem = assemble_context(state, query=msg)
     if mem:
         system += "\n\n" + mem

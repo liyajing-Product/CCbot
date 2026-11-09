@@ -8,15 +8,27 @@ const SCALARS = [
   ["name", "姓名", "比如：李四"],
   ["city", "城市", "比如：杭州"],
   ["tz", "时区", "比如：Asia/Shanghai"],
-  ["occupation", "职业", "比如：产品经理"],
+  ["occupation", "职业", "比如：退休教师"],
 ];
 const LISTS = [
   ["interests", "兴趣", "skill", "一行一条，比如：跑步"],
   ["preferences", "偏好", "ok", "一行一条，比如：回复尽量简短"],
-  ["facts", "备注", "exp", "一行一条，比如：下周三出差"],
+  ["facts", "备注", "exp", "一行一条，比如：周三去社区医院复查"],
 ];
+const HEALTH_SCALARS = [
+  ["blood_type", "血型", "比如：A 型"],
+  ["emergency_contact", "紧急联系人", "比如：女儿 13800000000"],
+  ["primary_doctor", "主治医生", "比如：李医生（心内科）"],
+];
+const HEALTH_LISTS = [
+  ["medical_history", "病史", "med", "一行一条，比如：高血压"],
+  ["medications", "用药清单", "med", "一行一条，比如：阿司匹林 每天一次"],
+  ["allergies", "过敏史", "warn", "一行一条，比如：青霉素"],
+];
+const ALL_SCALARS = [...SCALARS, ...HEALTH_SCALARS];
 const HIDDEN_KEYS = ["dialogue_summary", "last_summary_kind", "privacy_sandbox", "user_id", "updated_at", "created_at"];
-const LABELS = Object.fromEntries([...SCALARS, ...LISTS].map(([key, label]) => [key, label]));
+const LABELS = Object.fromEntries([...ALL_SCALARS, ...LISTS, ...HEALTH_LISTS].map(([key, label]) => [key, label]));
+const isScalarField = (field) => ALL_SCALARS.some(([key]) => key === field);
 
 let hooks = { onUserChange() {}, onProfileEdited() {}, onClearLocal() {} };
 let isOpen = false;
@@ -31,20 +43,37 @@ let saveRequest = 0;
 let memory = { state: "idle", events: [], error: "", query: "" };
 let memoryTimer = 0;
 let profileBox;
+let healthBox;
 let memoryBox;
 let secretsBox;
+let careBox;
+let modelBox;
 let secrets = { state: "idle", items: [], error: "", armed: "" };
+let care = { state: "idle", data: null, error: "", inviteUrl: "" };
+let model = { state: "idle", config: null, error: "", saving: false };
 
 export function initDrawer(options) {
   hooks = { ...hooks, ...options };
   profileBox = h("div", { class: "dw-profile" });
+  healthBox = h("div", { class: "dw-profile dw-health" });
   memoryBox = h("div", { class: "dw-memory" });
   secretsBox = h("div", { class: "dw-secrets" });
+  careBox = h("div", { class: "dw-care" });
+  modelBox = h("div", { class: "dw-model" });
   $("drawerBody").append(
     h("p", { class: "drawer-tip", text: "可选项 — 不填也能用。在对话里告诉我，我会自动记住。" }),
     h("section", { class: "drawer-section", "aria-labelledby": "dwProfileTitle" }, [
-      h("h3", { class: "drawer-section-title", id: "dwProfileTitle", text: "小助记住了什么" }),
+      h("h3", { class: "drawer-section-title", id: "dwProfileTitle", text: "小H记住了什么" }),
       profileBox,
+    ]),
+    h("section", { class: "drawer-section drawer-section-health", "aria-labelledby": "dwHealthTitle" }, [
+      h("h3", { class: "drawer-section-title", id: "dwHealthTitle", text: "健康档案" }),
+      h("p", { class: "drawer-tip", text: "用药、病史、过敏史、紧急联系人——关键时刻能帮上大忙。" }),
+      healthBox,
+    ]),
+    h("section", { class: "drawer-section", "aria-labelledby": "dwCareTitle" }, [
+      h("h3", { class: "drawer-section-title", id: "dwCareTitle", text: "家人守护" }),
+      careBox,
     ]),
     h("section", { class: "drawer-section", "aria-labelledby": "dwMemoryTitle" }, [
       h("div", { class: "drawer-section-head" }, [
@@ -56,6 +85,10 @@ export function initDrawer(options) {
     h("section", { class: "drawer-section", id: "dwSecrets", "aria-labelledby": "dwSecretsTitle" }, [
       h("h3", { class: "drawer-section-title", id: "dwSecretsTitle", tabindex: "-1", text: "安全保存的信息" }),
       secretsBox,
+    ]),
+    h("section", { class: "drawer-section", "aria-labelledby": "dwModelTitle" }, [
+      h("h3", { class: "drawer-section-title", id: "dwModelTitle", text: "模型设置" }),
+      modelBox,
     ])
   );
 
@@ -132,13 +165,19 @@ export function resetDrawer() {
   editingField = "";
   memory = { state: "idle", events: [], error: "", query: "" };
   secrets = { state: "idle", items: [], error: "", armed: "" };
+  care = { state: "idle", data: null, error: "", inviteUrl: "" };
+  model = { state: "idle", config: null, error: "", saving: false };
   renderProfile();
   renderMemory();
   renderSecrets();
+  renderCare();
+  renderModelConfig();
   loadProfile();
   if (isOpen) {
     loadMemory();
     loadSecrets();
+    loadCare();
+    loadModelConfig();
   }
 }
 
@@ -155,6 +194,8 @@ export function openDrawer({ focusField = "", section = "" } = {}) {
     loadProfile();
     loadMemory();
     loadSecrets();
+    loadCare();
+    loadModelConfig();
   }
   if (section === "secrets") {
     window.setTimeout(() => {
@@ -218,9 +259,18 @@ function trapFocus(e) {
   }
 }
 
+function inFieldBoxes(selector) {
+  for (const box of [profileBox, healthBox]) {
+    if (!box) continue;
+    const el = box.querySelector(selector);
+    if (el) return el;
+  }
+  return null;
+}
+
 function focusEditor() {
   window.setTimeout(() => {
-    const input = profileBox.querySelector(".dw-edit .field-input");
+    const input = inFieldBoxes(".dw-edit .field-input");
     if (input) {
       input.focus();
       input.scrollIntoView({ block: "center" });
@@ -240,7 +290,7 @@ function cancelEdit() {
   editingField = "";
   rowError = "";
   renderProfile();
-  const back = profileBox.querySelector(`[data-edit="${field}"]`);
+  const back = inFieldBoxes(`[data-edit="${field}"]`);
   if (back) back.focus();
 }
 
@@ -262,7 +312,7 @@ async function save(field, patch, summary) {
     renderProfile();
     toast("已记住");
     hooks.onProfileEdited(summary);
-    const back = profileBox.querySelector(`[data-edit="${field}"]`);
+    const back = inFieldBoxes(`[data-edit="${field}"]`);
     if (back) back.focus();
     loadMemory();
   } catch (err) {
@@ -281,7 +331,7 @@ async function save(field, patch, summary) {
 
 function submitField(field, raw) {
   const label = LABELS[field];
-  if (SCALARS.some(([key]) => key === field)) {
+  if (isScalarField(field)) {
     const value = raw.trim();
     if (!value) {
       rowError = "不能留空：暂时不支持清空，改成新的内容就行。";
@@ -310,7 +360,7 @@ function submitField(field, raw) {
 
 function editor(field, initial, multiline, placeholder) {
   const id = `dw-input-${field}`;
-  const isList = !SCALARS.some(([key]) => key === field);
+  const isList = !isScalarField(field);
   const input = multiline
     ? h("textarea", { class: "field-input", id, rows: 3, value: initial, placeholder })
     : h("input", { class: "field-input", id, value: initial, placeholder, autocomplete: "off" });
@@ -392,6 +442,7 @@ function listRow([field, label, cls, placeholder]) {
 function renderProfile() {
   if (!profileBox) return;
   profileBox.replaceChildren();
+  if (healthBox) healthBox.replaceChildren();
   if (!profile) {
     profileBox.append(
       profileError
@@ -401,6 +452,7 @@ function renderProfile() {
           ])
         : h("p", { class: "dw-empty", text: "正在读取档案…" })
     );
+    if (healthBox) healthBox.append(h("p", { class: "dw-empty", text: "正在读取健康档案…" }));
     return;
   }
   const empty = !Object.keys(profile).some((k) => {
@@ -420,6 +472,289 @@ function renderProfile() {
   );
   const dbg = debugBlock("profile JSON", profile);
   if (dbg) profileBox.append(dbg);
+  if (healthBox) renderHealthProfile();
+}
+
+function renderHealthProfile() {
+  if (!healthBox) return;
+  const hasHealth = HEALTH_SCALARS.some(([k]) => String((profile && profile[k]) || "")) ||
+    HEALTH_LISTS.some(([k]) => ((profile && profile[k]) || []).length);
+  if (!hasHealth) {
+    healthBox.append(h("p", { class: "dw-empty", text: "还没有健康档案。在对话里告诉我你的病史、用药、过敏史，或者在这里直接填写。" }));
+  }
+  HEALTH_SCALARS.forEach((def) => healthBox.append(scalarRow(def)));
+  HEALTH_LISTS.forEach((def) => healthBox.append(listRow(def)));
+}
+
+/* ---------------- 家人守护（caregiver binding） ---------------- */
+
+async function loadCare() {
+  care.state = "loading";
+  renderCare();
+  try {
+    const res = await api.careRelationships();
+    care.data = res.data || {};
+    care.state = "ok";
+  } catch (err) {
+    care.state = "error";
+    care.error = friendlyError(err, "care").text;
+  }
+  renderCare();
+}
+
+async function makeCareInvite() {
+  try {
+    const res = await api.careInvite();
+    care.inviteUrl = (res.data && res.data.url) || "";
+    renderCare();
+    if (care.inviteUrl) {
+      try {
+        await navigator.clipboard.writeText(care.inviteUrl);
+        toast("邀请链接已复制，发给你的家人吧");
+      } catch {
+        toast("邀请链接已生成，点链接框手动复制");
+      }
+    }
+  } catch (err) {
+    toast(friendlyError(err, "care").text);
+  }
+}
+
+async function viewCareHealth(recipientId, row) {
+  const slot = row && row.querySelector(".care-health");
+  if (!slot) return;
+  if (slot.dataset.loaded === "1") {
+    slot.hidden = !slot.hidden;
+    return;
+  }
+  slot.hidden = false;
+  slot.replaceChildren(h("p", { class: "dw-empty", text: "正在读取健康档案…" }));
+  try {
+    const res = await api.careHealth(recipientId);
+    const health = (res.data && res.data.health) || {};
+    slot.replaceChildren(renderHealthSnapshot(health));
+    slot.dataset.loaded = "1";
+  } catch (err) {
+    slot.replaceChildren(h("p", { class: "dw-empty", text: friendlyError(err, "care").text }));
+  }
+}
+
+function renderHealthSnapshot(health) {
+  const scalarMap = { name: "姓名", blood_type: "血型", emergency_contact: "紧急联系人", primary_doctor: "主治医生" };
+  const listMap = { medical_history: "病史", medications: "用药清单", allergies: "过敏史" };
+  const rows = [];
+  Object.entries(scalarMap).forEach(([key, label]) => {
+    if (health[key]) rows.push(h("div", { class: "dw-row" }, [
+      h("span", { class: "dw-label", text: label }),
+      h("span", { class: "dw-value", text: String(health[key]) }),
+    ]));
+  });
+  Object.entries(listMap).forEach(([key, label]) => {
+    const items = (health[key] || []).map(String).filter(Boolean);
+    if (items.length) rows.push(h("div", { class: "dw-row dw-list" }, [
+      h("div", { class: "dw-row-main" }, [
+        h("span", { class: "dw-label", text: label }),
+        h("span", { class: "dw-count", text: `${items.length} 项` }),
+      ]),
+      h("ul", { class: "dw-exp" }, items.map((t) => h("li", {}, [h("span", { text: t })]))),
+    ]));
+  });
+  if (!rows.length) return h("p", { class: "dw-empty", text: "对方还没有填写健康档案。" });
+  return h("div", { class: "care-health-body" }, rows);
+}
+
+async function unbindCare(relationshipId) {
+  try {
+    await api.careUnbind(relationshipId);
+    toast("已解除守护");
+    loadCare();
+  } catch (err) {
+    toast(friendlyError(err, "care").text);
+  }
+}
+
+function careRow(rel, direction) {
+  const name = rel.name || "家人";
+  const label = rel.relation_label || "子女";
+  if (direction === "caregiver") {
+    const row = h("div", { class: "dw-row dw-list" }, [
+      h("div", { class: "dw-row-top" }, [
+        h("div", { class: "dw-row-main" }, [
+          h("span", { class: "dw-label", text: label }),
+          h("span", { class: "dw-value", text: name }),
+        ]),
+        h("button", { type: "button", class: "btn-text dw-edit-btn", text: "查看健康档案", onClick: () => viewCareHealth(rel.care_recipient_id, row) }),
+      ]),
+    ]);
+    row.append(h("div", { class: "care-health", hidden: true }));
+    return row;
+  }
+  return h("div", { class: "dw-row" }, [
+    h("div", { class: "dw-row-main" }, [
+      h("span", { class: "dw-label", text: label }),
+      h("span", { class: "dw-value", text: name }),
+    ]),
+    h("button", { type: "button", class: "btn-text dw-edit-btn", text: "解除", onClick: () => unbindCare(rel.id) }),
+  ]);
+}
+
+function renderCare() {
+  if (!careBox) return;
+  careBox.replaceChildren();
+  careBox.append(
+    h("p", { class: "dw-note", text: "邀请子女守护你：他们能看到你的健康档案，突发状况时会收到提醒。" }),
+    h("button", { type: "button", class: "btn btn-ghost btn-sm", text: "生成守护邀请", onClick: () => makeCareInvite() })
+  );
+  if (care.inviteUrl) {
+    const urlInput = h("input", { class: "field-input", value: care.inviteUrl, readonly: true, "aria-label": "守护邀请链接" });
+    urlInput.addEventListener("click", () => urlInput.select());
+    careBox.append(urlInput);
+    careBox.append(h("p", { class: "dw-hint", text: "链接 7 天内有效、只能被确认一次。发给你的家人即可。" }));
+  }
+  if (care.state === "loading") {
+    careBox.append(h("p", { class: "dw-empty", text: "正在读取守护关系…" }));
+    return;
+  }
+  if (care.state === "error") {
+    careBox.append(h("div", { class: "dw-empty" }, [
+      h("p", { text: care.error }),
+      h("button", { type: "button", class: "btn btn-ghost btn-sm", text: "重试", onClick: () => loadCare() }),
+    ]));
+    return;
+  }
+  if (care.state !== "ok") return;
+  const asCaregiver = (care.data && care.data.as_caregiver) || [];
+  const asRecipient = (care.data && care.data.as_recipient) || [];
+  if (!asCaregiver.length && !asRecipient.length) {
+    careBox.append(h("p", { class: "dw-empty", text: "还没有守护关系。点上面的「生成守护邀请」，把链接发给家人。" }));
+    return;
+  }
+  if (asCaregiver.length) {
+    careBox.append(h("p", { class: "dw-note", text: "我守护的家人" }));
+    asCaregiver.forEach((rel) => careBox.append(careRow(rel, "caregiver")));
+  }
+  if (asRecipient.length) {
+    careBox.append(h("p", { class: "dw-note", text: "守护我的家人" }));
+    asRecipient.forEach((rel) => careBox.append(careRow(rel, "recipient")));
+  }
+}
+
+/* ---------------- 模型设置（用户自带 API Key） ---------------- */
+
+const MODEL_VENDORS = [
+  ["deepseek", "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat"],
+  ["kimi", "Kimi (Moonshot)", "https://api.moonshot.cn/v1", "kimi-k2.6"],
+  ["qwen", "通义千问", "https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen-plus"],
+  ["openai", "OpenAI", "https://api.openai.com/v1", "gpt-4o-mini"],
+  ["custom", "自定义", "", ""],
+];
+
+function vendorLabel(id) {
+  const found = MODEL_VENDORS.find(([v]) => v === id);
+  return found ? found[1] : "自定义";
+}
+
+async function loadModelConfig() {
+  model.state = "loading";
+  renderModelConfig();
+  try {
+    const res = await api.modelConfig();
+    model.config = res.data || {};
+    model.state = "ok";
+  } catch (err) {
+    model.state = "error";
+    model.error = friendlyError(err, "model").text;
+  }
+  renderModelConfig();
+}
+
+async function saveModel(vendor, baseUrl, modelName, apiKey) {
+  model.saving = true;
+  model.error = "";
+  renderModelConfig();
+  try {
+    const res = await api.saveModelConfig({ vendor, base_url: baseUrl, model: modelName, api_key: apiKey });
+    model.config = res.data || {};
+    model.state = "ok";
+    toast("模型配置成功，连接验证已通过", { duration: 1500 });
+  } catch (err) {
+    model.error = friendlyError(err, "model").text;
+    toast(`模型配置失败：${model.error}`, { error: true, duration: 3000 });
+  }
+  model.saving = false;
+  renderModelConfig();
+}
+
+async function deleteModel() {
+  model.saving = true;
+  model.error = "";
+  renderModelConfig();
+  try {
+    await api.deleteModelConfig();
+    model.config = { configured: false, has_key: false };
+    model.state = "ok";
+    toast("已移除自定义模型，恢复使用系统模型");
+  } catch (err) {
+    model.error = friendlyError(err, "model").text;
+  }
+  model.saving = false;
+  renderModelConfig();
+}
+
+function renderModelConfig() {
+  if (!modelBox) return;
+  modelBox.replaceChildren();
+  if (model.state === "loading") {
+    modelBox.append(h("p", { class: "dw-empty", text: "正在读取模型设置…" }));
+    return;
+  }
+  if (model.state === "error") {
+    modelBox.append(h("div", { class: "dw-empty" }, [
+      h("p", { text: model.error }),
+      h("button", { type: "button", class: "btn btn-ghost btn-sm", text: "重试", onClick: () => loadModelConfig() }),
+    ]));
+    return;
+  }
+
+  const cfg = model.config || {};
+  if (cfg.configured) {
+    modelBox.append(h("p", { class: "dw-note", text: `当前使用：${vendorLabel(cfg.vendor)} · ${cfg.model} · ${cfg.masked_key}` }));
+  } else {
+    modelBox.append(h("p", { class: "dw-note", text: "未配置自己的模型。填一个 OpenAI 兼容接口的 Key，就能用自己的模型对话。" }));
+  }
+
+  const vendor = h("select", { class: "field-input", id: "modelVendor", "aria-label": "模型厂商" });
+  MODEL_VENDORS.forEach(([id, label]) => vendor.append(h("option", { value: id, text: label })));
+  vendor.value = cfg.vendor || "custom";
+  const baseUrl = h("input", { class: "field-input", id: "modelBaseUrl", placeholder: "https://api.deepseek.com/v1", value: cfg.base_url || "", autocomplete: "off", "aria-label": "Base URL" });
+  const modelName = h("input", { class: "field-input", id: "modelName", placeholder: "deepseek-chat", value: cfg.model || "", autocomplete: "off", "aria-label": "模型名称" });
+  const apiKey = h("input", { class: "field-input", id: "modelApiKey", type: "password", placeholder: "sk-…（只加密保存在服务端）", autocomplete: "new-password", "aria-label": "API Key" });
+
+  vendor.addEventListener("change", () => {
+    const preset = MODEL_VENDORS.find(([id]) => id === vendor.value);
+    if (preset && preset[2]) baseUrl.value = preset[2];
+    if (preset && preset[3]) modelName.value = preset[3];
+  });
+
+  const saveBtn = h("button", { type: "button", class: "btn btn-primary btn-sm", text: model.saving ? "正在验证…" : "验证并保存", disabled: model.saving, onClick: () => saveModel(vendor.value, baseUrl.value.trim(), modelName.value.trim(), apiKey.value.trim()) });
+  const actions = h("div", { class: "dw-edit-actions" }, [saveBtn]);
+  if (cfg.configured) {
+    actions.append(h("button", { type: "button", class: "btn btn-ghost btn-sm", text: "移除", disabled: model.saving, onClick: () => deleteModel() }));
+  }
+
+  modelBox.append(h("div", { class: "dw-edit" }, [
+    h("label", { class: "dw-field-label", for: "modelVendor", text: "厂商" }),
+    vendor,
+    h("label", { class: "dw-field-label", for: "modelBaseUrl", text: "Base URL" }),
+    baseUrl,
+    h("label", { class: "dw-field-label", for: "modelName", text: "模型名称" }),
+    modelName,
+    h("label", { class: "dw-field-label", for: "modelApiKey", text: "API Key" }),
+    apiKey,
+    model.error ? h("p", { class: "dw-error", role: "alert", text: model.error }) : null,
+    actions,
+  ]));
+  modelBox.append(h("p", { class: "dw-hint", text: "Key 只在服务端加密保存，接口从不回显明文。移除后恢复使用系统模型。" }));
 }
 
 async function loadMemory() {
@@ -445,7 +780,7 @@ function renderMemory() {
       type: "search",
       class: "field-input mem-search",
       id: "memSearch",
-      placeholder: "搜索记忆，比如 出差",
+      placeholder: "搜索记忆，比如 复查",
       "aria-label": "搜索记忆",
     });
     search.addEventListener("input", () => {

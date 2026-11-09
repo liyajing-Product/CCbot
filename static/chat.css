@@ -1,4 +1,4 @@
-/* CCbot · chat page (the only product page). Tokens come from design.css. */
+/* Health House · chat page (the only product page). Tokens come from design.css. */
 
 :root {
   --overlay-light: #fffffff5;
@@ -649,6 +649,44 @@ textarea.field-input.draft-edit {
 }
 .card-memory .card-actions { margin-top: 12px; }
 
+/* ---------- Health card ---------- */
+.card-health {
+  padding: 0;
+  overflow: hidden;
+  border-color: var(--amber);
+}
+.card-health:hover { border-color: var(--amber-deep); }
+.health-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+.health-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+.health-k {
+  flex-shrink: 0;
+  min-width: 76px;
+  font-size: 12.5px;
+  color: var(--amber-deep);
+}
+.health-v {
+  min-width: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.health-group { margin-top: 10px; }
+.health-group-label {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+.health-group .mem-list { margin-top: 4px; }
+
 /* ---------- Reminder / continue cards ---------- */
 .card-proactive { border-left: 3px solid var(--amber); }
 .card-continue { border-left: 3px solid var(--text); }
@@ -804,6 +842,18 @@ textarea.field-input.draft-edit {
   color: var(--text-secondary);
 }
 .drawer-section { margin-top: 18px; }
+.drawer-section-health {
+  padding: 12px 14px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: linear-gradient(180deg, var(--amber-soft), transparent 72%);
+}
+.drawer-section-health .drawer-section-title { color: var(--amber-deep); }
+.dw-health .dw-label { color: var(--amber-deep); }
+.dw-health .dw-empty { color: var(--amber-deep); opacity: 0.85; }
+.dw-care .field-input { margin: 8px 0 6px; font-size: 12px; }
+.care-health { margin-top: 6px; padding-left: 10px; border-left: 2px solid var(--border); }
+.care-health-body .dw-row:last-child { border-bottom: none; }
 .drawer-section-head {
   display: flex;
   align-items: center;

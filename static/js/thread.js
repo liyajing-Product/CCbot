@@ -213,12 +213,12 @@ export function assistantMessage(text, { scroll = true, animate = true, speak = 
   const row = h("div", { class: `msg msg-assistant${animate ? " enter" : ""}` }, [
     avatar(),
     h("div", { class: "bubble bubble-assistant" }, [
-      h("span", { class: "sr-only", text: "小助：" }),
+      h("span", { class: "sr-only", text: "小H：" }),
       collapsible(text, "bubble-text", { markdown: true }),
       onFeedback ? feedbackBar(feedback, onFeedback) : null,
     ]),
   ]);
-  if (speak) announce(`小助：${text}`);
+  if (speak) announce(`小H：${text}`);
   return append(row, { scroll });
 }
 
@@ -277,28 +277,51 @@ export function typing({ hint = "", slowHint = "" } = {}) {
   };
 }
 
-export function renderHero({ onChip, onMemory }) {
+export function renderHero({ onChip, onMemory, onMedication }) {
   if ($("hero")) return;
-  const chip = (label, onClick = () => onChip(label)) =>
-    h("button", { type: "button", class: "btn btn-ghost hero-chip", onClick, text: label });
+  const featureIcon = (name) => {
+    const svg = icon(name);
+    const paths = {
+      list: '<rect x="3" y="3" width="18" height="18" rx="5"/><path class="feature-pulse" d="M5 12h4l2-5 3 10 2-5h3"/>',
+      bell: '<g class="feature-bell"><path d="M18 8a6 6 0 0 0-12 0c0 7-2 8-2 8h16s-2-1-2-8Z"/><path d="M10 20a2 2 0 0 0 4 0"/><path d="M12 2v1"/></g>',
+      doc: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/><path class="feature-writing" d="M8 13h8m-8 4h5"/>',
+      shield: '<g class="feature-memory"><path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 12 9 5 9-5m-18 5 9 5 9-5"/></g>',
+    };
+    svg.innerHTML = paths[name];
+    return svg;
+  };
+  const chip = (title, detail, glyph, prompt, onClick = () => onChip(prompt)) =>
+    h("button", { type: "button", class: `hero-chip feature-${glyph}`, onClick }, [
+      h("span", { class: "quick-overlay", "aria-hidden": "true" }),
+      h("span", { class: "quick-icon", "aria-hidden": "true" }, [featureIcon(glyph)]),
+      h("span", { class: "quick-copy" }, [h("strong", { text: title })]),
+      h("span", { class: "quick-arrow", "aria-hidden": "true", text: "↗" }),
+    ]);
   const hero = h("section", { class: "hero enter", id: "hero", "aria-labelledby": "heroTitle" }, [
-    h("p", { class: "hero-kicker", text: "小助 · 办公工作台" }),
-    h("h2", { id: "heroTitle", text: "今天有什么我可以帮忙的？" }),
-    h("p", {
-      class: "hero-sub",
-      text: "起草邮件、安排提醒，或记下之后还要用的信息。",
-    }),
+    h("div", { class: "hero-mascot", role: "img", "aria-label": "向你招手的胶囊健康伙伴" }, [
+      h("div", { class: "hero-mascot-frame", "aria-hidden": "true" }, [
+        h("img", {
+          class: "hero-mascot-sprite",
+          src: "/static/images/capsule-companion-wave.png",
+          alt: "",
+          decoding: "async",
+          fetchpriority: "high",
+          onError: (event) => { event.currentTarget.closest(".hero-mascot").hidden = true; },
+        }),
+      ]),
+    ]),
+    h("p", { class: "hero-kicker", id: "heroGreeting", text: "你好，欢迎回来" }),
+    h("h2", { id: "heroTitle", text: "今天，有什么可以帮你？" }),
   ]);
   $("log").appendChild(hero);
 
   const actions = $("heroActions");
   actions.replaceChildren(
-    chip("记住我下周三出差"),
-    chip("帮我写一封请假邮件"),
-    chip("明早八点提醒我"),
-    chip("最近有点累"),
+    chip("记录身体近况", "记录最近的症状与身体变化", "list", "我想记录一下最近的健康状况，请引导我填写"),
+    chip("安排用药提醒", "按你的用药计划，安排日常提醒", "bell", "我想设置用药提醒，请先问我药名和时间", onMedication),
+    chip("整理就医笔记", "梳理症状，准备想和医生说的话", "doc", "帮我准备一份就医笔记，请先询问我的症状和就诊需求"),
+    chip("回顾健康记忆", "查看已记录的信息与健康近况", "shield", "你记得我什么", onMemory || (() => onChip("你记得我什么"))),
   );
-  if (onMemory) actions.append(chip("你记得我什么", onMemory));
   actions.hidden = false;
 }
 

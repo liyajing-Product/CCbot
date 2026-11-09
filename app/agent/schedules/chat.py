@@ -18,7 +18,7 @@ def respond(uid, name, message, *, pending=None):
             '追问时可同时返回 args 保存已知参数。用户取消或改聊无关话题时返回 {"unrelated": true}，不得继续旧任务。'
             '只能操作所列任务。不得输出用户身份、确认凭证或批准标志。'
             'schedule.create 的 schedule 与 update 的 patch 可含 name、job_kind、trigger、tz、prompt_text、delivery、channel_preference、max_runs、enabled。'
-            'job_kind 可为 one_shot_reminder、custom_nl。'
+            'job_kind 可为 one_shot_reminder、custom_nl、medication（用药提醒，须使用 cron）。'
             'custom_nl 必须将用户指令保存为 prompt_text；仅允许只读采集与本人记忆查询，不能外发，仍须确认卡。'
             'delivery 可为 in_app、both、channel、email 或数组如 ["in_app","email"]。邮件未配置时会跳过并记录原因。'
             'schedule.list 可用 job_kind 过滤，无过滤时 args 为 {}。'
@@ -63,5 +63,4 @@ def respond(uid, name, message, *, pending=None):
 
 
 def _profile_tz(uid):
-    from app import db
-    return (db.get_profile(uid) or {}).get('tz') or 'Asia/Shanghai'
+    return service.default_timezone(uid)

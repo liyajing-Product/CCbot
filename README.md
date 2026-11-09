@@ -1,10 +1,10 @@
 <div align="center">
 
-# 办公助理 agent
+# Health House
 
-**有长期记忆的办公助理**
+**有长期记忆的健康陪伴助手**
 
-陪你聊、记住你说过的事、替你起草、按时提醒。<br>
+记住你的健康状况、按时提醒用药、守护家人、陪你聊天。<br>
 任何会产生后果的动作，都先给你一张确认卡。
 
 LangGraph · FastAPI · 原生 JS 前端 · 可二次开发 · MIT
@@ -12,7 +12,7 @@ LangGraph · FastAPI · 原生 JS 前端 · 可二次开发 · MIT
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](Dockerfile)
 [![Version](https://img.shields.io/badge/version-0.8.2-informational.svg)](VERSION)
-[![Deploy to Render](https://img.shields.io/badge/Deploy-Render-46E3B7.svg)](https://render.com/deploy?repo=https://github.com/your-name/office-assistant-agent)
+[![Deploy to Render](https://img.shields.io/badge/Deploy-Render-46E3B7.svg)](https://render.com/deploy?repo=https://github.com/liyajing-Product/personal_agent)
 
 [快速开始](#快速开始) · [它能做什么](#它能做什么) · [工作原理](#工作原理) · [多渠道接入](#多渠道接入) · [安全与隐私](#安全与隐私) · [二次开发](#二次开发)
 
@@ -22,21 +22,24 @@ LangGraph · FastAPI · 原生 JS 前端 · 可二次开发 · MIT
 
 ## 为什么是它
 
-市面上的「个人助理」要么是一个聊天框，关掉就忘；要么能力很强，但你不敢把它接进飞书和微信。办公助理 agent 想做的是中间那条路：
+市面上的「健康助手」要么是冷冰冰的提醒闹钟，不会对话、不记病史、出事不兜底；要么是通用 AI 助手，你不敢把父母的健康信息交给它。Health House 想做的是中间那条路：
 
-- **真的记得你。** 姓名、城市、职业、兴趣、偏好和你随口提过的事，会沉淀成一张可查看、可修改、可遗忘的记忆卡，而不是藏在某个向量库里。
-- **先确认，再行动。** 写草稿、建定时任务、调用外部工具，统统先出确认卡。它不会替你发消息、发邮件、提交表单，也不会在聊天里收你的密码和手机号。
-- **一个账号，多个入口。** 网页会话即账号；飞书、微信通过一次性链接绑定到同一份档案和记忆。
+- **真的记得你（和你的健康）。** 姓名、病史、用药清单、过敏史、紧急联系人，会沉淀成一张可查看、可修改、可遗忘的健康档案，而不是藏在某个向量库里。
+- **先确认，再行动。** 建用药提醒、写草稿、调用外部工具，统统先出确认卡。它不会替你发消息、发邮件、提交表单，也不会在聊天里收你的密码和手机号。
+- **一个账号，多个入口。** 网页会话即账号；飞书、微信通过一次性链接绑定到同一份档案和记忆。子女通过一次性邀请链接成为「守护人」，可查看健康档案。
 - **安全护栏是内置的，不是贴上去的。** 出站防泄露、隐私脱敏、危机识别、一次性确认凭证、全链路轨迹日志，都有金标回归测试守着。
 - **拿来就能改。** 模型任意厂商可换，工具一个装饰器就能注册，渠道按接口加，[CONTRIBUTING.md](CONTRIBUTING.md) 按改动深度分五层带你入门。
 
 ## 它能做什么
 
 ```
-你：我叫小胡，在上海做产品经理，最近在学 Rust。
-助理：记住了。             → 记忆卡：姓名 小胡 · 城市 上海 · 职业 产品经理 · 兴趣 Rust
+你：我叫张桂芳，有高血压，在吃阿司匹林，对青霉素过敏。
+助理：记住了。             → 健康档案：病史 高血压 · 用药 阿司匹林 · 过敏 青霉素
 
-你：帮我给房东写条消息，说下周三交租要晚两天。
+你：每天早上八点提醒我吃降压药。
+助理：要创建这个用药提醒吗？ → 确认卡 → 到点推送微信 / 飞书，子女也能在网页端看到
+
+你：帮我给医生写一段病情描述，周三复诊用。
 助理：这是草稿 ……           → 确认卡：确认 / 带修改意见确认 / 拒绝并说明原因（会自动重写）
 
 你：每天早上八点提醒我看一眼 Hacker News 头条。
@@ -48,11 +51,11 @@ LangGraph · FastAPI · 原生 JS 前端 · 可二次开发 · MIT
 
 | 做 | 不做 |
 |----|------|
-| 带记忆的对话；记忆卡上随时查看、修改、遗忘 | 替你对外发消息、发邮件、提交表单 |
-| 写作草稿（邮件 / 消息 / 文章 / 笔记）→ 确认卡 → 定稿 | 在聊天里收账号密码、手机号、身份证 |
-| 一次性提醒、自定义只读定时任务 | 登录任何网站、无人值守操作 |
-| 读公开网页 / RSS / 搜索 / Hacker News 作为**不可信**来源 | 把网页内容当成指令执行 |
-| 危机识别与热线兜底、提示词泄露与隐私护栏 | 把你的数据交给第三方可观测平台（Langfuse 可选、自托管、脱敏后导出） |
+| 健康档案记忆：病史、用药、过敏、紧急联系人，可查看 / 修改 / 遗忘 | 替你对外发消息、发邮件、提交表单 |
+| 用药提醒：说「每天8点吃降压药」→ 确认卡 → 到点推送微信 / 飞书 | 在聊天里收账号密码、手机号、身份证 |
+| 家人守护：一次性邀请链接，子女只读查看健康档案 | 登录任何网站、无人值守操作 |
+| 写作草稿（病情描述 / 邮件 / 消息 / 文章）→ 确认卡 → 定稿 | 把网页内容当成指令执行 |
+| 读公开网页 / RSS / 搜索、危机识别与热线兜底、隐私护栏 | 把你的数据交给第三方可观测平台（Langfuse 可选、自托管、脱敏后导出） |
 
 ## 快速开始
 
@@ -61,7 +64,7 @@ LangGraph · FastAPI · 原生 JS 前端 · 可二次开发 · MIT
 需要 Python 3.12。
 
 ```bash
-git clone https://github.com/your-name/office-assistant-agent.git && cd office-assistant-agent
+git clone https://github.com/liyajing-Product/personal_agent.git && cd personal_agent
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt -c requirements.lock
 cp .env.example .env
@@ -213,10 +216,11 @@ flowchart LR
 | `POST /api/draft` | 直接发起草稿（`request`） |
 | `POST /api/confirm/{thread_id}/token` · `POST /api/confirm` | 一次性确认凭证 + 确认 / 拒绝（可带 `edits` / `reason`） |
 | `POST /api/continue` | 预算用尽后继续任务 |
-| `GET/POST /api/profile` | 通用档案（name / city / tz / occupation / interests / preferences / facts） |
+| `GET/POST /api/profile` | 个人档案（姓名 / 城市 / 职业 / 兴趣）+ 健康档案（病史 / 用药 / 过敏 / 紧急联系人） |
 | `GET /api/memory/{user_id}` · `/card` · facts / events · `/forget` | 记忆查看与编辑 |
 | `GET/POST/DELETE /api/secrets` | 安全输入区（从不返回明文） |
 | `/api/schedules*` | 定时任务 CRUD、确认卡决定、运行历史 |
+| `POST /api/care/invite` · `GET /api/care/link` · `POST /api/care/bind` · `GET /api/care/health/{id}` · `DELETE /api/care/{id}` | 家人守护：邀请、确认、查看健康档案、解除 |
 | `GET /api/proactive/pending` · `POST .../dismiss` | 应用内提醒收件箱 |
 | `GET /bind` · `POST /api/channels/bind/complete` · `GET /sandbox` · `POST /api/sandbox/submit` | 渠道绑定与隐私安全通道 |
 | `POST /webhooks/feishu` · `POST /webhooks/openclaw/wechat` | 渠道入站 |

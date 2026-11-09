@@ -321,7 +321,7 @@ def public_profile(profile: Any, *, user_id: str = "") -> Any:
             return {k: _walk(x) for k, x in v.items()}
         return v
 
-    out = {k: _walk(v) for k, v in profile.items() if k != "privacy_sandbox"}
+    out = {k: (v if k == "emergency_contact" else _walk(v)) for k, v in profile.items() if k != "privacy_sandbox"}
     if "privacy_sandbox" in profile:
         out["privacy_sandbox"] = {"count": len(sandbox_from_profile(profile)), "values": "hidden"}
     return out

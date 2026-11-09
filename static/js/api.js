@@ -165,6 +165,7 @@ async function turnRequest(path, json) {
 
 export const api = {
   schedules: () => request("/api/schedules"),
+  proposeSchedule: (schedule) => request("/api/schedules/proposals", { method: "POST", json: schedule }),
   schedule: (id) => request(`/api/schedules/${enc(id)}`),
   scheduleRuns: (id) => request(`/api/schedules/${enc(id)}/runs?limit=30`),
   updateSchedule: (id, patch) => request(`/api/schedules/${enc(id)}`, { method: "PATCH", json: patch }),
@@ -240,6 +241,27 @@ export const api = {
       timeout: HEAVY_TIMEOUT,
     });
   },
+  careInvite() {
+    return request("/api/care/invite", { method: "POST" });
+  },
+  careRelationships() {
+    return request("/api/care/relationships");
+  },
+  careHealth(recipientId) {
+    return request(`/api/care/health/${enc(recipientId)}`);
+  },
+  careUnbind(relationshipId) {
+    return request(`/api/care/${enc(relationshipId)}`, { method: "DELETE" });
+  },
+  modelConfig() {
+    return request("/api/model/config");
+  },
+  saveModelConfig(patch) {
+    return request("/api/model/config", { method: "PUT", json: patch });
+  },
+  deleteModelConfig() {
+    return request("/api/model/config", { method: "DELETE" });
+  },
   memory({ q = "", limit = 15 } = {}) {
     return request(`/api/memory/${enc(currentUserId())}?limit=${limit}&q=${enc(q)}`);
   },
@@ -308,6 +330,10 @@ export function friendlyError(err, ctx = "") {
   }
   if (err.kind === "parse") {
     return { text: "服务这次的回复不完整。稍后点「重试」。", retry: true };
+  }
+  if (ctx === "model" && ["model_connection_failed", "invalid_config", "vault_unavailable"].includes(err.code)) {
+    const message = plainServerMessage(err.message);
+    if (message) return { text: `${message}。`, retry: true };
   }
   const { status } = err;
   const onCard = ctx === "confirm" || ctx === "continue";

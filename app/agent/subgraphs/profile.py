@@ -8,7 +8,9 @@ from app import db
 from app.agent.memory import write_event
 from app.state import AgentState
 
-PROFILE_FIELDS = ("name", "city", "tz", "occupation", "interests", "preferences", "facts")
+PROFILE_FIELDS = ("name", "city", "tz", "occupation", "interests", "preferences", "facts",
+                  "blood_type", "emergency_contact", "primary_doctor",
+                  "medical_history", "medications", "allergies")
 
 
 def _uid(state: AgentState) -> str:
@@ -71,4 +73,10 @@ _LABELS = {
     "interests": "兴趣",
     "preferences": "偏好",
     "facts": "备注",
+    "blood_type": "血型",
+    "emergency_contact": "紧急联系人",
+    "primary_doctor": "主治医生",
+    "medical_history": "病史",
+    "medications": "用药清单",
+    "allergies": "过敏史",
 }

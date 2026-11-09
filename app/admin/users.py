@@ -57,7 +57,9 @@ def list_users(q="", disabled=None, limit=50, offset=0):
         return {"total": len(items), "items": items[offset:offset + limit]}
 
 
-_PROFILE_FIELDS = {"name", "contact", "city", "tz", "occupation", "interests", "preferences", "facts"}
+_PROFILE_FIELDS = {"name", "contact", "city", "tz", "occupation", "interests", "preferences", "facts",
+                  "blood_type", "emergency_contact", "primary_doctor",
+                  "medical_history", "medications", "allergies"}
 
 
 def detail(user_id, reveal=False):

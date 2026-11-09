@@ -8,12 +8,12 @@ type BridgeConfig = {
 };
 
 const DEFAULT_CHANNELS = ["openclaw-weixin", "weixin", "wechat"];
-const UNAVAILABLE = "个人助理暂时连不上，请稍后再试。";
+const UNAVAILABLE = "健康陪伴助手暂时连不上，请稍后再试。";
 
 export default definePluginEntry({
   id: "personal-agent-bridge",
-  name: "办公助理 agent Bridge",
-  description: "Hand WeChat messages to the 办公助理 agent service and send its reply verbatim.",
+  name: "Health House Bridge",
+  description: "Hand WeChat messages to the Health House service and send its reply verbatim.",
   register(api) {
     const cfg = (api.pluginConfig ?? {}) as BridgeConfig;
     const baseUrl = (cfg.agentUrl || process.env.PERSONAL_AGENT_URL || "").replace(/\/+$/, "");

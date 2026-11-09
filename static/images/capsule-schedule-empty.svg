@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 280" fill="none">
+  <title>抱着空白日历的胶囊伙伴</title>
+  <ellipse cx="162" cy="246" rx="112" ry="16" fill="#EDF9F3"/>
+  <g stroke="#263B33" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M52 96c-9-5-15-3-18 3m232-14c10-7 18-6 22-1M39 224l16-5m214 7 14 5"/>
+    <path d="M93 102V70c0-35 24-55 60-55 35 0 61 20 61 55v58H93" fill="#E0F5EA"/>
+    <path d="M93 108v67c0 34 25 54 60 54 37 0 61-20 61-54v-67" fill="#fff"/>
+    <path d="M94 108c34 5 79 5 119 0"/>
+    <path d="M147 32v8h-8v8h8v8h9v-8h8v-8h-8v-8z" fill="#3ABA8A" stroke="#3ABA8A" stroke-width="2"/>
+    <path d="m116 69 10-3m48 0 10 3"/>
+    <ellipse cx="125" cy="84" rx="6" ry="9" fill="#263B33" stroke="none"/>
+    <ellipse cx="178" cy="84" rx="6" ry="9" fill="#263B33" stroke="none"/>
+    <path d="M146 96c4 4 8 4 12 0"/>
+    <path d="M121 222l-6 14m68-14 7 14"/>
+    <path d="M116 235c-11-3-24 2-27 10-1 5 31 7 40 2l-3-11zM188 235c12-3 25 2 28 10 1 5-30 7-40 2l3-11z" fill="#263B33"/>
+    <path d="m68 124 86 15 91-15-6 80-85 18-82-18z" fill="#fff"/>
+    <path d="m74 116 80 18 84-18 7 8-91 21-86-21z" fill="#E0F5EA"/>
+    <path d="m154 145 0 77m-68-91 54 13m28 0 57-13"/>
+    <path d="m90 151 44 9m-45 5 44 9m-42 6 42 9m-39 6 39 8M172 159l52-11m-51 25 49-10m-48 24 47-9m-46 23 44-9" stroke="#A4CDB8" stroke-width="2"/>
+    <path d="m103 153-1 39m15-36-1 39m73-41 1 39m16-42 0 37" stroke="#A4CDB8" stroke-width="2"/>
+    <path d="M72 147c-20-4-25 9-18 22 3 7 10 12 18 13l4-12-12-5 12-1 2-8-14-4 8-1zM240 148c19-5 25 7 20 21-3 7-9 12-18 15l-4-12 12-6-13 1-2-9 14-5-9-1z" fill="#fff"/>
+    <path d="m273 117 6-7m-1 16 9-1M55 62l-2-9m-6 14-8-3" stroke="#3ABA8A"/>
+  </g>
+  <g fill="#fff">
+    <circle cx="123" cy="81" r="2"/>
+    <circle cx="176" cy="81" r="2"/>
+  </g>
+</svg>

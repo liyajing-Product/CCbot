@@ -42,6 +42,7 @@ EXEMPT_EXACT = {
     "/api/channels/bindings",
     "/api/channels/link",
     "/api/channels/bind/complete",
+    "/api/care/link",
     "/api/sandbox/submit",
     "/api/sandbox/draft",
     "/api/proactive/tick",
@@ -198,10 +199,14 @@ class SessionIdentityMiddleware:
             # Pre-graph tools (URL gating and routing) need the same trusted
             # identity as graph nodes. Context also propagates to sync workers.
             with user_scope(uid), step_context(user_id=uid, thread_id=thread_id):
+                from app import user_model
+                user_model.set_current(user_model.build_spec(uid))
                 from app.agent.schedules.activity import heartbeat
                 await run_in_threadpool(heartbeat, uid)
                 return await self.app(scope, replay, send)
         with user_scope(uid), step_context(user_id=uid, thread_id=thread_id):
+            from app import user_model
+            user_model.set_current(user_model.build_spec(uid))
             from app.agent.schedules.activity import heartbeat
             await run_in_threadpool(heartbeat, uid)
             return await self.app(scope, receive, send)

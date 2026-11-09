@@ -1,7 +1,7 @@
 import { initSchedules } from "./schedules.js?v=__APP_VERSION__";
 import { $, h, DEBUG, VERSION, toast } from "./core.js?v=__APP_VERSION__";
 import { api } from "./api.js?v=__APP_VERSION__";
-import { currentUserId, ensureSession } from "./identity.js?v=__APP_VERSION__";
+import { currentUserId, ensureSession, sessionReady } from "./identity.js?v=__APP_VERSION__";
 import { store } from "./store.js?v=__APP_VERSION__";
 import { initThread } from "./thread.js?v=__APP_VERSION__";
 import { initComposer, focusComposer } from "./composer.js?v=__APP_VERSION__";
@@ -53,7 +53,7 @@ async function loadHealth() {
 }
 
 function startConversation() {
-  if (!restoreTranscript()) showHero();
+  showHero();
   loadProactive();
 }
 
@@ -91,7 +91,14 @@ async function boot() {
     if (panel && panel.open) panel.close();
     resetThread();
     showHero();
-    focusComposer();
+  });
+
+  $("workspaceAssistant").addEventListener("click", (event) => {
+    event.preventDefault();
+    closeDrawer();
+    if ($("schedulesPanel").open) $("schedulesPanel").close();
+    resetThread();
+    restoreTranscript();
   });
 
   try {
@@ -104,7 +111,11 @@ async function boot() {
   loadProfile();
   await Promise.race([healthReady, new Promise((resolve) => window.setTimeout(resolve, 1500))]);
   startConversation();
-  if (window.matchMedia("(pointer: fine)").matches) focusComposer();
+  const refreshReminders = () => {
+    if (!document.hidden && sessionReady()) loadProactive();
+  };
+  window.setInterval(refreshReminders, 15000);
+  document.addEventListener("visibilitychange", refreshReminders);
 }
 
 boot();

@@ -15,6 +15,12 @@ class ProfileBody(BaseModel):
     interests: list[str] = Field(default_factory=list)
     preferences: list[str] = Field(default_factory=list)
     facts: list[str] = Field(default_factory=list)
+    blood_type: Optional[str] = None
+    emergency_contact: Optional[str] = None
+    primary_doctor: Optional[str] = None
+    medical_history: list[str] = Field(default_factory=list)
+    medications: list[str] = Field(default_factory=list)
+    allergies: list[str] = Field(default_factory=list)
     # Values the agent may use internally but must never output (masked everywhere).
     privacy_sandbox: list[str] = Field(default_factory=list)
 

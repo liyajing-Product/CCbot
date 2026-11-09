@@ -1,4 +1,4 @@
-"""Harness guardrails for the 办公助理 agent.
+"""Harness guardrails for the Health House.
 
 1) No leaks in outbound text: secrets, system prompts, other users, privacy sandbox
 2) Group chat never receives personal data

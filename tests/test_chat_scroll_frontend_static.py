@@ -202,7 +202,7 @@ def test_jump_visibility_depends_only_on_actual_bottom_gap():
     near_bottom = block(THREAD, "function isNearBottom()", "export function scrollToBottom(")
     assert "s.scrollHeight - s.scrollTop - s.clientHeight <= 80" in near_bottom
     # No event or auto-scroll path may override the geometry-derived state.
-    assert THREAD.count('.hidden =') == 1
+    assert THREAD.count('$("jumpLatest").hidden =') == 1
 
 
 def test_jump_visibility_handles_missing_elements_and_bottom_threshold():

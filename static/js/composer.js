@@ -1,6 +1,6 @@
 import { $ } from "./core.js?v=__APP_VERSION__";
 
-const DEFAULT_PLACEHOLDER = "和我聊聊，或者说「帮我写一封邮件」";
+const DEFAULT_PLACEHOLDER = "描述你的健康问题，或安排一项提醒…";
 
 let busy = false;
 let submitHandler = null;
@@ -8,6 +8,21 @@ let submitHandler = null;
 export function initComposer({ onSubmit }) {
   submitHandler = onSubmit;
   const input = $("composerInput");
+  $("composerShell").addEventListener("click", (event) => {
+    if (event.target.closest("button")) return;
+    if (!event.target.closest("button, textarea")) input.focus();
+    const wave = $("homeAurora");
+    const hero = $("hero");
+    if (!wave || !hero || hero.dataset.auroraPlayed || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    hero.dataset.auroraPlayed = "true";
+    wave.classList.remove("is-playing");
+    // A newly entered home view gets one greeting wave; later clicks only focus.
+    void wave.offsetWidth;
+    wave.classList.add("is-playing");
+  });
+  $("homeAurora")?.addEventListener("animationend", (event) => {
+    if (event.pseudoElement === "::after") event.currentTarget.classList.remove("is-playing");
+  });
   input.addEventListener("input", () => {
     hideComposerError();
     autoGrow();
