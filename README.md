@@ -1,316 +1,159 @@
-<div align="center">
+# Health House · 个人健康 Agent
 
-# Health House
+Health House 是一个以网页为主要入口的个人健康助手。当前项目提供健康对话、健康档案、记忆管理、用药与日程提醒，以及用户自定义模型配置。
 
-**有长期记忆的健康陪伴助手**
+仓库：[liyajing-Product/personal_agent](https://github.com/liyajing-Product/personal_agent) · 版本：`0.8.2` · 许可证：[MIT](LICENSE)
 
-记住你的健康状况、按时提醒用药、守护家人、陪你聊天。<br>
-任何会产生后果的动作，都先给你一张确认卡。
+## 当前界面与使用流程
 
-LangGraph · FastAPI · 原生 JS 前端 · 可二次开发 · MIT
+| 入口 | 当前行为 |
+| --- | --- |
+| 首页 | 默认进入欢迎页，展示胶囊 IP、四张功能卡片和对话输入框 |
+| AI 健康助手 | 打开对话区，恢复该浏览器中当前用户的历史对话 |
+| 健康记忆 | 查看、编辑和删除已记录的档案要点与近期记忆 |
+| 用药与日程 | 右侧抽屉展示已有提醒；没有提醒时显示缺省插画，可新建每日用药提醒或一次性日程 |
+| 健康档案 | 侧边抽屉维护个人及健康信息，并提供模型设置、家人守护等配置入口 |
+| 个人空间 | 查看病史、当前用药和过敏记录等健康概览 |
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](Dockerfile)
-[![Version](https://img.shields.io/badge/version-0.8.2-informational.svg)](VERSION)
-[![Deploy to Render](https://img.shields.io/badge/Deploy-Render-46E3B7.svg)](https://render.com/deploy?repo=https://github.com/liyajing-Product/personal_agent)
+首页四个快捷入口是“记录身体近况”“安排用药提醒”“整理就医笔记”“回顾健康记忆”。用药提醒可直接通过表单填写，不要求先用自然语言与模型对话。
 
-[快速开始](#快速开始) · [它能做什么](#它能做什么) · [工作原理](#工作原理) · [多渠道接入](#多渠道接入) · [安全与隐私](#安全与隐私) · [二次开发](#二次开发)
+新建提醒的网页流程为：填写属性 → 核对提醒卡片 → 确认创建。确认卡右上角可返回修改已填写的内容。已有提醒支持查看详情、修改、暂停、恢复、删除和运行记录查询；这些管理动作按各自的按钮与接口执行，不统一宣称所有操作都经过同一种确认卡。
 
-</div>
+界面使用品牌色 `#3ABA8A`、PingFang 优先字体及统一宽度的抽屉。首页首次点击输入框时播放全屏暖色冲击柔光，覆盖页面视口；再次点击不重播，重新进入首页后重置。光效使用透明 Canvas，结束即清理，支持减少动态效果；当前没有页面截图扭曲、色散或边缘折射。
 
----
+## 对话、档案与提醒如何工作
 
-## 为什么是它
+前端使用原生 HTML / CSS / JavaScript，后端为 FastAPI。页面通过同源 `/api/*` 请求与后端通信。
 
-市面上的「健康助手」要么是冷冰冰的提醒闹钟，不会对话、不记病史、出事不兜底；要么是通用 AI 助手，你不敢把父母的健康信息交给它。Health House 想做的是中间那条路：
+- **对话与就医笔记**：`/api/chat` 等接口进入 LangGraph 编排，由模型网关调用可用模型，结合当前用户的上下文与记忆返回文本或交互卡片。生成的内容用于记录、整理和辅助沟通，不替代医生诊断或处方。
+- **档案与健康概览**：档案抽屉、个人空间直接调用档案接口。已保存的个人资料、病史、用药和过敏信息由后端存储；这些表单操作不必经过模型。
+- **记忆管理**：后端提供档案事实和近期事件的查询、编辑与删除接口；浏览器另有对话记录缓存。清除本机对话记录不等于删除服务端健康档案或全部记忆。
+- **用药与日程**：网页表单通过日程 API 创建待确认方案，用户确认后保存；调度器到点生成站内提醒。是否自动执行取决于后端调度器是否启用、进程是否持续运行及部署环境。
+- **模型设置**：用户可在档案抽屉填写 OpenAI 兼容接口的 Base URL、模型名与 API Key。保存前会发起小规模连接验证；失败时显示原因，不将失败结果当作配置成功。
 
-- **真的记得你（和你的健康）。** 姓名、病史、用药清单、过敏史、紧急联系人，会沉淀成一张可查看、可修改、可遗忘的健康档案，而不是藏在某个向量库里。
-- **先确认，再行动。** 建用药提醒、写草稿、调用外部工具，统统先出确认卡。它不会替你发消息、发邮件、提交表单，也不会在聊天里收你的密码和手机号。
-- **一个账号，多个入口。** 网页会话即账号；飞书、微信通过一次性链接绑定到同一份档案和记忆。子女通过一次性邀请链接成为「守护人」，可查看健康档案。
-- **安全护栏是内置的，不是贴上去的。** 出站防泄露、隐私脱敏、危机识别、一次性确认凭证、全链路轨迹日志，都有金标回归测试守着。
-- **拿来就能改。** 模型任意厂商可换，工具一个装饰器就能注册，渠道按接口加，[CONTRIBUTING.md](CONTRIBUTING.md) 按改动深度分五层带你入门。
+主要实现入口：
 
-## 它能做什么
+| 模块 | 文件 |
+| --- | --- |
+| 页面和导航 | [static/index.html](static/index.html)、[static/js/workspace.js](static/js/workspace.js) |
+| 输入、对话与光效 | [composer.js](static/js/composer.js)、[flows.js](static/js/flows.js)、[shockwave.js](static/js/shockwave.js) |
+| 档案及模型设置界面 | [drawer.js](static/js/drawer.js) |
+| 日程界面与服务 | [schedules.js](static/js/schedules.js)、[app/agent/schedules/](app/agent/schedules/) |
+| FastAPI 接口 | [app/main.py](app/main.py) |
+| 对话编排与模型网关 | [app/graph.py](app/graph.py)、[app/gateway/](app/gateway/) |
+| 用户模型配置 | [app/user_model.py](app/user_model.py) |
+| 家人守护关系 | [app/care.py](app/care.py) |
 
-```
-你：我叫张桂芳，有高血压，在吃阿司匹林，对青霉素过敏。
-助理：记住了。             → 健康档案：病史 高血压 · 用药 阿司匹林 · 过敏 青霉素
+## 数据、身份与隐私边界
 
-你：每天早上八点提醒我吃降压药。
-助理：要创建这个用药提醒吗？ → 确认卡 → 到点推送微信 / 飞书，子女也能在网页端看到
+- 当前网页以**服务端签名的浏览器会话**识别用户，不是完整的手机号注册、密码登录或跨设备账号系统。更换浏览器或丢失会话 Cookie 后，不能假定会自动找回原来的身份与数据。
+- 默认数据目录为 `DATA_DIR`（默认 `./data`）。业务数据默认使用 SQLite，LangGraph 检查点也使用本地 SQLite。浏览器对话缓存与服务端数据是两套存储。
+- 用户提交的模型 API Key 使用 `SECRETS_FERNET_KEY` 加密后保存，配置查询只返回脱敏状态。**健康档案和整个数据库并非因此自动获得全库加密。** 服务器磁盘、备份、访问权限和 HTTPS 仍需部署者配置。
+- 使用真实模型时，后端会向所配置的模型服务商发送请求，其中可能包括用户输入与参与上下文组装的健康信息、记忆。API Key 也会用于该服务商的鉴权；不能将此产品描述为“数据从不离开服务器”。保存模型配置时的连接测试也会调用对应接口，可能产生少量模型费用。
+- 项目有身份校验、隐私拦截、出站检查、日志脱敏及相关测试。它们是代码层面的防护，不代表已完成生产安全认证，也不能保证模型回复永远正确或所有敏感信息永远不会泄漏。
+- 家人守护需通过邀请与确认建立关系，相关页面可以查看被授权的健康档案；不是默认向所有家人开放全部对话与提醒。
+- 不应把 `.env`、API Key、会话凭证、数据库和真实健康资料提交到 GitHub。仓库忽略规则与 Vercel 上传忽略规则已排除本地运行数据和环境文件。
 
-你：帮我给医生写一段病情描述，周三复诊用。
-助理：这是草稿 ……           → 确认卡：确认 / 带修改意见确认 / 拒绝并说明原因（会自动重写）
+## 本地运行
 
-你：每天早上八点提醒我看一眼 Hacker News 头条。
-助理：要创建这个定时任务吗？ → 确认卡 → 到点结果进应用内收件箱，并推送到已绑定的飞书 / 微信
-
-你：我的支付宝密码是……
-助理：这里不收密码。        → 给你一个网页安全输入区链接，加密保存，从不回显明文
-```
-
-| 做 | 不做 |
-|----|------|
-| 健康档案记忆：病史、用药、过敏、紧急联系人，可查看 / 修改 / 遗忘 | 替你对外发消息、发邮件、提交表单 |
-| 用药提醒：说「每天8点吃降压药」→ 确认卡 → 到点推送微信 / 飞书 | 在聊天里收账号密码、手机号、身份证 |
-| 家人守护：一次性邀请链接，子女只读查看健康档案 | 登录任何网站、无人值守操作 |
-| 写作草稿（病情描述 / 邮件 / 消息 / 文章）→ 确认卡 → 定稿 | 把网页内容当成指令执行 |
-| 读公开网页 / RSS / 搜索、危机识别与热线兜底、隐私护栏 | 把你的数据交给第三方可观测平台（Langfuse 可选、自托管、脱敏后导出） |
-
-## 当前版本
-
-- 独立首页默认打开，AI 健康助手入口保留历史对话。
-- 品牌色 `#3ABA8A`、胶囊 IP 招手动画、统一导航与侧边抽屉。
-- 首页输入框首次点击触发全屏 Halo 暖色冲击柔光；离开首页停止绘制，支持减少动态效果。
-- 用药与日程支持独立表单、确认卡与提醒管理；健康档案支持用户模型配置及结果提示。
-
-## 部署到 Vercel
-
-本仓库提供 Vercel 前端部署配置。**FastAPI 后端需部署到支持持久数据和常驻进程的服务器**，再由 Vercel 同源代理 `/api/*` 和 `/health`。当前 SQLite 档案、记忆、对话检查点及常驻提醒调度器不能直接作为 Vercel 无状态函数的生产存储或定时服务。
-
-1. 在后端服务器按下方 Docker 或 Render 流程部署，配置持久数据目录、`AUTH_SECRET`、模型服务及需要的提醒功能。
-2. 在 Vercel 导入 `liyajing-Product/personal_agent`，使用根目录 `vercel.json`。
-3. 在 Vercel 的 Production / Preview 环境设置 `HEALTH_HOUSE_BACKEND_URL` 为后端 HTTPS 源站地址（例如 `https://your-backend.example.com`，不能使用本机地址）。
-4. 执行 `npx vercel --prod`，或通过 Git 集成部署。构建脚本会生成 `.vercel/output` 并替换前端版本标记。
-
-Vercel 不需要也不应上传本地 `.env`、数据库或个人健康数据。后端地址缺失时构建会明确失败，避免发布看似上线却无法保存档案和执行提醒的版本。当前本地开发地址为 `http://127.0.0.1:8789/`；它不是公网部署地址。
-
-## 快速开始
-
-### 本地三分钟
-
-需要 Python 3.12。
+建议使用 Python 3.12，与 [Dockerfile](Dockerfile) 保持一致。
 
 ```bash
-git clone https://github.com/liyajing-Product/personal_agent.git && cd personal_agent
-python3 -m venv .venv && source .venv/bin/activate
+git clone https://github.com/liyajing-Product/personal_agent.git
+cd personal_agent
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt -c requirements.lock
 cp .env.example .env
 ```
 
-打开 `.env`，至少填这两项：
+编辑本机 `.env`，至少设置 `AUTH_SECRET`。如果需要在网页中保存用户自己的模型 API Key，同时设置 `SECRETS_FERNET_KEY`。可在本机生成这两个值，妥善保存，不提交到仓库：
 
 ```bash
-AUTH_SECRET=     # 必填。生成：python -c "import secrets; print(secrets.token_hex(32))"
-KIMI_API_KEY=    # Moonshot / Kimi Key。不填也能启动，聊天走离线占位（mock），方便先看流程
+python -c "import secrets; print(secrets.token_hex(32))"
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
-启动：
+分别将输出填入 `AUTH_SECRET` 和 `SECRETS_FERNET_KEY`。然后启动：
 
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8787
+uvicorn app.main:app --host 127.0.0.1 --port 8789
 ```
 
-| 页面 | 地址 |
-|------|------|
-| 首页 / 对话 | http://127.0.0.1:8787/ |
-| 健康检查 | http://127.0.0.1:8787/health |
-| 管理后台（需管理员令牌） | http://127.0.0.1:8787/admin |
+- 首页：`http://127.0.0.1:8789/`
+- 健康检查：`http://127.0.0.1:8789/health`
+- 管理页面：`http://127.0.0.1:8789/admin`，管理接口另需管理员令牌
 
-样例配置默认 FAST / STRONG 两档都走 Kimi（`kimi-k2.6` / `kimi-k3`）。换 DeepSeek、通义、OpenAI 或任何 OpenAI 兼容接口，只改 `.env`，见 [docs/llm-gateway.md](docs/llm-gateway.md)。
+要体验真实 AI 对话，需要配置可访问的模型。可以在网页的健康档案抽屉中保存用户模型配置，也可以由部署者配置服务端默认模型。没有可用模型时不能将页面启动等同于 AI 对话已经可用。
 
-### Docker
+## 当前需要的配置
 
-```bash
-docker build -t personal-agent .
-docker run --rm -p 8787:8787 -e AUTH_SECRET=换成随机串 -e KIMI_API_KEY=你的key personal-agent
-```
+下面列出与网页主流程直接相关的配置；完整环境变量模板见 [`.env.example`](.env.example)。模板中的渠道、向量检索和观测选项不代表默认启用。
 
-### Render 一键部署
+| 配置 | 用途与条件 |
+| --- | --- |
+| `AUTH_SECRET` | 签名服务端用户会话；缺失时受保护接口不可用 |
+| `SECRETS_FERNET_KEY` | 加密保存用户模型 API Key 和安全输入区内容；不配置则不能使用相关保存功能 |
+| `DATA_DIR` | 服务端数据目录，正式部署需要持久磁盘和备份 |
+| `LLM_FAST_BASE_URL` / `LLM_FAST_MODEL` / `LLM_FAST_API_KEY` | 部署者配置的 FAST 档默认模型 |
+| `LLM_STRONG_BASE_URL` / `LLM_STRONG_MODEL` / `LLM_STRONG_API_KEY` | 部署者配置的 STRONG 档默认模型 |
+| `KIMI_API_KEY` 等厂商变量 | 模型网关支持的其他密钥入口；按实际选用厂商配置，详见 [模型网关文档](docs/llm-gateway.md) |
+| `PROACTIVE_ENABLED=1` | 启用后端主动调度；示例模板默认关闭，不启用时保存提醒不等于会到点执行 |
+| `PROACTIVE_TZ=Asia/Shanghai` | 应用调度时区；单条日程也记录自己的时区 |
+| `HARNESS_ADMIN_TOKENS` | 管理接口鉴权，普通用户网页流程不需要填写管理员令牌 |
+| `HEALTH_HOUSE_BACKEND_URL` | **Vercel 构建环境**中的持久 FastAPI 后端 HTTPS 源站地址，不是用户模型接口地址 |
 
-点上方 **Deploy to Render** 按钮，或在 Render 新建 Blueprint 选本仓库。免费实例没有持久盘，重启会清空 SQLite 数据，正式使用请挂盘。详见 [docs/deploy.md](docs/deploy.md)。
+用户在网页填写的 Base URL 应是模型基础接口地址，不要包含 `/chat/completions`。保存成功提示约 1.5 秒消失；失败提示展示原因，约 3 秒消失。删除用户模型配置后，回到部署者配置的模型，而非保证仍有真实模型可用。
 
-## 工作原理
+## 部署现状与方式
 
-```mermaid
-flowchart LR
-    subgraph 入口
-        W[网页对话]
-        F[飞书长连接]
-        X[微信 · OpenClaw 桥]
-    end
-    W & F & X --> G["渠道网关<br/>入站归一 · 绑定检查 · 隐私拦截"]
-    G --> R[LangGraph Router]
-    R --> C[chat]
-    R --> D[draft → confirm]
-    R --> P[profile]
-    C & D & P --> T["工具注册表<br/>风险等级 · 确认门禁 · 超时 · 审计"]
-    T --> L["LLM 网关<br/>FAST / STRONG · 模型链降级"]
-    T --> M[("记忆<br/>档案 · 情节 · 摘要 · 可选向量")]
-    C & D & P --> H["出站护栏<br/>防泄露 · 脱敏 · 轨迹日志"]
-    H --> G
-```
+当前采用的部署拆分是：**Vercel 承载前端，持久服务器运行 FastAPI 与调度器**。
 
-| 层 | 实现 | 说明 |
-|----|------|------|
-| 编排 | LangGraph，`app/graph.py` → `app/agent/router.py` → `app/agent/subgraphs/` | 三个子图：chat / draft+confirm / profile。`run_action` 是唯一入口 |
-| 工具 | `app/agent/tool_registry.py` | 一个装饰器注册；风险等级决定是否需要确认，`external` 一律需要。清单见 [docs/tools.md](docs/tools.md) |
-| 记忆 | `app/agent/memory/` | 工作记忆 = LangGraph checkpoint；档案 = SQLite 事实；情节 = `episodic_events`（关键词 / 标签）；后台对话摘要；向量检索可选 |
-| 模型 | `app/gateway/` | task → FAST / STRONG → 有序模型链；失败、超时、429、空内容自动降级；OpenAI 兼容 + Anthropic |
-| 渠道 | `app/channels/` | Web / 飞书 / OpenClaw 统一走 `gateway.py`，共用同一个 agent thread，分别渲染为网页卡片 / 飞书卡片 / 微信文本菜单 |
-| 主动 | `app/agent/schedules/` `proactive/` | 调度器默认关；一次性提醒、自定义只读任务，结果进收件箱并推送到已绑定渠道 |
-| 护栏 | `app/agent/harness/` `app/privacy.py` | 进图前的隐私门、出站防泄露、轨迹脱敏、管理员鉴权 |
-| 提示词 | `app/prompts/<name>/vN.md` | 版本化文件，哈希被测试锁定；改提示词新建 v2 而不是改 v1 |
-| 存储 | SQLite 默认 | 设 `DATABASE_URL` 切到 Postgres，带行级安全（RLS），见 [docs/postgres-rls.md](docs/postgres-rls.md) |
+- GitHub 仓库已用于同步当前项目代码。
+- Vercel 项目已建立并关联该仓库，但仍需配置可访问的持久后端地址，尚不能把它当作已完成的全功能公网版本。
+- 本地 `127.0.0.1:8789` 只在开发机器上可用，不是可以填写到 Vercel 的公网后端地址。
 
-更完整的图和设计取舍：[docs/agent-stack.md](docs/agent-stack.md) · [docs/技术架构.md](docs/技术架构.md)（英文版 [tech-architecture.md](docs/tech-architecture.md)）· Mermaid 源图 [docs/mmd/](docs/mmd/)。
+Vercel 部署步骤：
 
-## 多渠道接入
+1. 先将 FastAPI 部署到可保存 `DATA_DIR`、持续运行调度器的服务器，并配置必要的会话、加密与模型环境变量。
+2. 在 Vercel 项目环境变量中设置 `HEALTH_HOUSE_BACKEND_URL`，值为后端 HTTPS 源站地址，不含账号、路径、查询参数或片段。
+3. 使用 [vercel.json](vercel.json) 构建；[构建脚本](scripts/build-vercel.mjs) 输出前端静态文件，并同源代理 `/api/*` 和 `/health` 到后端。
+4. 执行 `npx vercel --prod` 或通过 Git 集成发布，随后验证首页、会话、档案读写、模型调用和提醒执行。
 
-**两个渠道默认都关。** 所有渠道走同一个网关：入站归一 → 绑定检查 → 隐私拦截 → 同一个 agent thread → 渲染 → 出站。
+构建缺少后端地址会明确报错。Vercel Functions 的临时文件系统不能直接替代本项目的持久 SQLite 数据目录，常驻调度也不能直接照搬到无状态函数中。仅给业务库配置 PostgreSQL，并不会自动迁移仍使用 SQLite 的对话检查点和所有文件存储。
 
-| 渠道 | 开关 | 接入方式 |
-|------|------|----------|
-| 飞书 | `FEISHU_ENABLED=1` + `FEISHU_APP_ID` / `FEISHU_APP_SECRET` | 官方 SDK 长连接，**不需要公网地址**。见 [docs/feishu-长连接.md](docs/feishu-长连接.md) |
-| 微信 | `OPENCLAW_WECHAT_ENABLED=1` + `OPENCLAW_WEBHOOK_TOKEN` | OpenClaw Gateway + [桥接插件](integrations/openclaw-personal-agent-bridge/README.md) |
-| QQ 等 | 未实现 | 只留了 `ChannelAdapter` 接口（`app/channels/qq.py`），按 [CONTRIBUTING 第三层](CONTRIBUTING.md#第三层加渠道两到三天) 补 |
+仓库保留了 [Dockerfile](Dockerfile)、[render.yaml](render.yaml) 和 [部署参考](docs/deploy.md)。这些属于后端托管选项；必须按实际平台配置持久存储，不能仅凭容器启动就宣称长期记忆与定时服务已可靠上线。
 
-渠道里的三条规则：
+## 可选集成，不是默认已上线能力
 
-- **绑定走对话。** 未绑定用户发任何消息，都会收到一次性绑定链接（`/bind`）。用常用浏览器打开并点「确认绑定」，渠道账号即绑到该浏览器的网页会话，共用档案和记忆，无需密码。
-- **隐私不进聊天。** 手机号、邮箱、身份证、银行卡一律不在渠道里收集，改发网页安全通道链接（`/sandbox`）。
-- **草稿只发预览。** 渠道里附「在网页查看完整草稿」链接；确认 / 拒绝在飞书是卡片按钮，微信回数字 `1` / `2`。
+仓库仍保留飞书、OpenClaw 微信桥、家人守护和部分后台基础设施。这些代码的存在不等于当前公网部署已接通。
 
-细节见 [docs/channels.md](docs/channels.md)。
+| 集成 | 当前说明 |
+| --- | --- |
+| 飞书 | 有长连接、绑定和消息处理代码；需要开关、应用凭证、平台权限与可持续运行的后端，不能只靠网页部署启用 |
+| OpenClaw 微信桥 | 有桥接代码；需要独立网关、插件、Webhook 配置和用户绑定，不是直接接入个人微信的即开即用能力 |
+| 家人守护 | 网页抽屉有邀请及关系管理入口，后端有授权健康档案查询；实际分享访问需可用后端与访问地址 |
+| 向量检索、Langfuse、PostgreSQL / RLS | 保留可选实现和配置，不能代表当前默认运行栈或已完成生产验收 |
 
-## 安全与隐私
+接入细节参见 [渠道文档](docs/channels.md) 与 [OpenClaw 桥说明](integrations/openclaw-personal-agent-bridge/README.md)。主产品仍是本 README 上述的网页健康工作空间。
 
-这些不是「建议」，而是有测试守着的不变量，改动前请读 [CONTRIBUTING 第 3 节「不要动的东西」](CONTRIBUTING.md#3-不要动的东西)。
-
-- **身份只来自服务端签发的会话。** 每个 `/api` 调用的 `user_id` 只从签名 Cookie / Token 推导，从不信任请求体。`AUTH_SECRET` 缺失时所有 `/api` 返回 503。
-- **确认门禁。** 草稿、定时任务的创建 / 修改 / 删除都走确认卡；外部工具需要一次性、参数绑定的确认凭证。确认卡不过期，后点覆盖先点。
-- **出站防泄露。** 所有出站文本过滤密钥、系统提示词原文、他人数据和隐私沙盒值；检查失败 fail closed（`E_GUARD_UNAVAILABLE`），节点异常只返回 `E_NODE_FAILED`。
-- **隐私门在图之前。** 密码、手机号、身份证在进入 LangGraph 之前就被拦下，转到加密的安全输入区（Fernet，支持密钥轮换，API 从不返回明文）。
-- **网页内容是不可信数据。** 抓取结果带 `shared.untrusted_data` 规则进提示词，防提示注入有专门测试。
-- **预算与失控检测。** 每个任务按难度分档限制步数 / 时长 / token / 费用，近限额时收尾，超限给「继续」卡；每用户有日 / 月费用上限。
-- **轨迹日志。** 每个图节点一行：输入摘要、工具、参数、结果摘要、耗时、模型档位、token 估算、护栏命中；入库前统一脱敏，用户 / 线程以 HMAC 假名出现。
-- **金标回归。** `tests/golden/` 覆盖安慰、危机、草稿、泄露、轨迹鉴权。安全类必须零失败；质量类与 `baseline.json` 比较。
-
-## 配置
-
-完整键名与注释见 [`.env.example`](.env.example)。**不要提交填好的 `.env`。**
-
-| 想要 | 需要填 |
-|------|--------|
-| 跑起来 | `AUTH_SECRET` |
-| 真模型对话 | `KIMI_API_KEY`，或 `LLM_FAST_*` / `LLM_STRONG_*` 指向任意 OpenAI 兼容接口 |
-| 安全输入区可用 | `SECRETS_FERNET_KEY` |
-| 接飞书 / 微信 | `PUBLIC_BASE_URL`（HTTPS）+ 对应渠道开关，见上表 |
-| 定时任务与提醒 | `PROACTIVE_ENABLED=1`、`PROACTIVE_TZ` |
-| 管理后台与轨迹查询 | `HARNESS_ADMIN_TOKENS`（`name:token[:scope]`，≥16 位） |
-| 向量记忆 | `MEMORY_VECTOR_ENABLED=1`（默认关） |
-| Langfuse 可观测性 | `LANGFUSE_ENABLED=1` + Host / Public Key / Secret Key，见 [docs/langfuse.md](docs/langfuse.md) |
-| Postgres | `DATABASE_URL`、`SYSTEM_DATABASE_URL` |
-
-<details>
-<summary>按分组看关键键</summary>
-
-| 分组 | 关键键 |
-|------|--------|
-| LLM | `KIMI_API_KEY`；`LLM_FAST_BASE_URL/MODEL/API_KEY`、`LLM_STRONG_*`、`LLM_STRONG_FALLBACK_MODEL`；多模型链 `LLM_FAST_CHAIN` / `LLM_STRONG_CHAIN` 或 `LLM_CONFIG_FILE` |
-| 会话 | `AUTH_SECRET`（必填） |
-| 渠道公共 | `PUBLIC_BASE_URL`、`CHANNEL_ADMIN_TOKEN`、`CHANNEL_BIND_TTL_SECONDS`、`CHANNEL_SANDBOX_TTL_SECONDS` |
-| 飞书 | `FEISHU_ENABLED`、`FEISHU_APP_ID`、`FEISHU_APP_SECRET`、`FEISHU_BIND_OPEN_IDS` |
-| 微信 | `OPENCLAW_WECHAT_ENABLED`、`OPENCLAW_WEBHOOK_TOKEN`、`OPENCLAW_GATEWAY_URL`、`OPENCLAW_GATEWAY_TOKEN` |
-| 安全保存 | `SECRETS_FERNET_KEY`（逗号分隔可轮换） |
-| 预算 | `AGENT_BUDGET_<SIMPLE\|MEDIUM\|HARD>_<STEPS\|SECONDS\|TOKENS\|COST>`、`AGENT_COST_CAP_*`、`AGENT_MAX_REDRAFTS` |
-| 主动调度 | `PROACTIVE_ENABLED`、`PROACTIVE_TZ`、`PROACTIVE_TICK_SECONDS` |
-| Harness | `HARNESS_ADMIN_TOKENS`、`HARNESS_ID_HMAC_KEY`、`PII_BACKEND`（regex / presidio / gliner）、`PRIVACY_SANDBOX_VALUES`、`TRACE_WRITE_MODE` |
-| 可观测性 | `LANGFUSE_ENABLED`、`LANGFUSE_HOST`、`LANGFUSE_PUBLIC_KEY`、`LANGFUSE_SECRET_KEY`、`LLM_PRICES_JSON` |
-| 记忆 | `MEMORY_VECTOR_ENABLED`、`INTENT_SCORING_MODE`、`SILICONFLOW_API_KEY` |
-
-</details>
-
-## HTTP API
-
-<details>
-<summary>接口摘要（点开）</summary>
-
-| 路径 | 说明 |
-|------|------|
-| `POST /api/session` | 签发 / 刷新网页会话 |
-| `GET /health` · `GET /api/capabilities` · `GET /api/tools` | 网关与通道状态、能力清单、工具列表 |
-| `POST /api/chat` | 对话；写作请求返回 `awaiting_confirm` + `task_card`（`draft_confirm`） |
-| `POST /api/draft` | 直接发起草稿（`request`） |
-| `POST /api/confirm/{thread_id}/token` · `POST /api/confirm` | 一次性确认凭证 + 确认 / 拒绝（可带 `edits` / `reason`） |
-| `POST /api/continue` | 预算用尽后继续任务 |
-| `GET/POST /api/profile` | 个人档案（姓名 / 城市 / 职业 / 兴趣）+ 健康档案（病史 / 用药 / 过敏 / 紧急联系人） |
-| `GET /api/memory/{user_id}` · `/card` · facts / events · `/forget` | 记忆查看与编辑 |
-| `GET/POST/DELETE /api/secrets` | 安全输入区（从不返回明文） |
-| `/api/schedules*` | 定时任务 CRUD、确认卡决定、运行历史 |
-| `POST /api/care/invite` · `GET /api/care/link` · `POST /api/care/bind` · `GET /api/care/health/{id}` · `DELETE /api/care/{id}` | 家人守护：邀请、确认、查看健康档案、解除 |
-| `GET /api/proactive/pending` · `POST .../dismiss` | 应用内提醒收件箱 |
-| `GET /bind` · `POST /api/channels/bind/complete` · `GET /sandbox` · `POST /api/sandbox/submit` | 渠道绑定与隐私安全通道 |
-| `POST /webhooks/feishu` · `POST /webhooks/openclaw/wechat` | 渠道入站 |
-| `POST /api/feedback` | 对话气泡下的 👍 / 👎 |
-| `GET /api/admin/traces` · `/api/admin/audit` · `/api/admin/feedback` · `/api/admin/users*` | 管理接口（管理员令牌，按 scope 授权） |
-
-每个 `/api/*` 响应带 `X-Trace-Id`。所有路由都在 `app/main.py`，定时任务与管理后台分别在 `app/agent/schedules/api.py` 和 `app/admin/api.py`。
-
-</details>
-
-## 测试
-
-测试永远是 mock 模式：`tests/conftest.py` 会删掉环境里所有 `*_API_KEY` 并禁止加载 `.env`，本地有 Key 也不会花额度。
+## 开发与检查
 
 ```bash
 pip install -r requirements-dev.txt -c requirements.lock
-python -m pytest -q                                              # 单元 + 集成
-AUTH_SECRET=x python tests/golden/run_golden.py --mode mock      # 金标回归（CI 默认）
-python tests/golden/run_golden.py --mode live                    # 真实模型（需 Key）
-python scripts/harness_golden.py                                 # CI 门禁入口
+python -m pytest -q
+node tests/model_config_ui.mjs
+node tests/unit/schedules_create_ui.mjs
+node tests/unit/schedules_ui.mjs
+node tests/session_wall_stick_ui.mjs
 ```
 
-接上真实模型后，`python scripts/live_smoke.py` 会把主流程跑一遍并生成 [docs/live-smoke-report.md](docs/live-smoke-report.md)，作为「正常长什么样」的参照。评审 rubric（共情 / 危机处理）：`python -m app.evals.cli`。
+[光效测试](tests/test_shockwave_frontend.py) 使用独立 Chrome / Chromium 与合成页面检查全屏 Canvas、两侧覆盖、边缘渐隐、首次点击和播放结束清理；没有可用浏览器时跳过。
 
-## 二次开发
+模型金标测试分 mock 与 live 模式。日常检查可使用 mock；live 会调用实际服务并可能收费，不应将所有测试笼统描述为“永远不会花额度”。
 
-[CONTRIBUTING.md](CONTRIBUTING.md) 是给新人的地图，按改动深度分五层，每层标出入口文件、必须同步的契约测试和不能动的安全不变量：
-
-| 层 | 做什么 | 大约 |
-|----|--------|------|
-| 1 换皮 | 提示词、文案、样式、换模型厂商 | 半天 |
-| 2 加工具 | 一个 `@tool` 装饰器，确认卡 / 凭证 / 超时 / 审计 / `/api/tools` 自动跟上 | 一到两天 |
-| 3 加渠道 | 实现 `ChannelAdapter`，接入统一网关 | 两到三天 |
-| 4 改记忆 | 换检索、加向量、改写入路径 | 三到五天 |
-| 5 改编排 | 加子图、改路由 | 一周以上 |
-
-加一个工具长这样：
-
-```python
-from app.agent.tool_registry import tool
-
-@tool("weather_lookup", risk_level="read",
-      description="查询城市当前天气。",
-      when_to_use="用户问天气或出门穿衣时使用。",
-      when_not_to_use="不用于历史气候数据。",
-      timeout=20)
-def weather_lookup(city: str, user_id: str = "") -> dict:
-    ...
+```bash
+AUTH_SECRET=test-only python tests/golden/run_golden.py --mode mock --judge-gate
 ```
 
-可选的领域指导包（Skills）放在 `app/agent/skills/`，只提供文本指导，不授予工具、不改权限，见 [docs/skills.md](docs/skills.md)。
-
-## 文档索引
-
-| 主题 | 文档 |
-|------|------|
-| 整体栈与图 | [agent-stack.md](docs/agent-stack.md) · [技术架构.md](docs/技术架构.md) · [mmd/](docs/mmd/) |
-| 工具 | [tools.md](docs/tools.md)（清单）· [tool-registry.md](docs/tool-registry.md)（机制）· [model-tool-selection.md](docs/model-tool-selection.md) |
-| 模型网关 | [llm-gateway.md](docs/llm-gateway.md) · [llm_models.example.json](docs/llm_models.example.json) |
-| 记忆与上下文 | [context-assembly.md](docs/context-assembly.md) · [vector-memory-write.md](docs/vector-memory-write.md) · [intent-confidence-validation.md](docs/intent-confidence-validation.md) |
-| 渠道 | [channels.md](docs/channels.md) · [feishu-长连接.md](docs/feishu-长连接.md) · [OpenClaw 桥](integrations/openclaw-personal-agent-bridge/README.md) |
-| 定时任务 | [schedules.md](docs/schedules.md) |
-| 部署与运维 | [deploy.md](docs/deploy.md) · [postgres-rls.md](docs/postgres-rls.md) · [langfuse.md](docs/langfuse.md) · [admin.md](docs/admin.md) |
-| 界面 | [DESIGN.md](DESIGN.md)（chat-only 单页，浅色，Geist 自托管） |
-
-## 现状与边界
-
-- 当前版本 0.8.2，SQLite 单机即可跑，Postgres + RLS 已可用但未在生产长期验证。
-- QQ 渠道只有接口位；向量记忆、主动调度、两个渠道、Langfuse 全部默认关闭，按需打开。
-- Render 免费实例无持久盘，仅适合演示。
-- 已知粗糙处与常见坑见 [CONTRIBUTING 第 5、6 节](CONTRIBUTING.md#5-已知的粗糙处)。
-
-## License
-
-[MIT](LICENSE)
+进一步阅读：[CONTRIBUTING.md](CONTRIBUTING.md)、[日程服务](docs/schedules.md)、[模型网关](docs/llm-gateway.md)、[管理接口](docs/admin.md)。较早的设计文档可能描述了通用 Agent 阶段的结构，判断当前行为应以实现与测试为准。
