@@ -4,7 +4,7 @@ Health House 是一个以网页为主要入口的个人健康助手。当前项�
 
 仓库：[liyajing-Product/personal_agent](https://github.com/liyajing-Product/personal_agent) · 版本：`0.8.2` · 许可证：[MIT](LICENSE)
 
-[在线界面预览](https://personal-agent-phi-gules.vercel.app/)：当前已发布前端，AI 对话、档案保存和到点提醒尚需连接持久后端。
+[在线使用](https://personal-agent-phi-gules.vercel.app/)会跳转至 CloudBase 部署。当前已验证真实对话、档案读写、用药提醒执行及到点自动调度。当前使用容器本地 SQLite，重建可能丢失数据，适合功能体验。
 
 ## 当前界面与使用流程
 
@@ -109,12 +109,16 @@ uvicorn app.main:app --host 127.0.0.1 --port 8789
 
 ## 部署现状与方式
 
-当前采用的部署拆分是：**Vercel 承载前端，持久服务器运行 FastAPI 与调度器**。
+当前运行在 CloudBase 国内站环境 `xhs-title-d7gzkh7q756a39372` 的 `personal-agent` 服务，提供网页、FastAPI 和提醒调度器。服务采用 0.5 CPU / 1 GiB、单实例常驻运行。
 
-- GitHub 仓库已用于同步当前项目代码。
-- Vercel 已发布[前端界面预览](https://personal-agent-phi-gules.vercel.app/)。当前设置 `HEALTH_HOUSE_PREVIEW=1`，页面明确显示服务未连接，API 返回 503，不保存用户资料、不执行对话或提醒。
-- 接入可访问的持久后端后，重新部署即可启用完整服务；不能把界面预览当作已完成的全功能公网版本。
-- 本地 `127.0.0.1:8789` 只在开发机器上可用，不是可以填写到 Vercel 的公网后端地址。
+- [CloudBase 入口](https://personal-agent-341863-5-1314145452.sh.run.tcloudbase.com/)首次访问会显示平台测试域名提示，阅读后确认访问。
+- Vercel 设置 `HEALTH_HOUSE_BACKEND_URL` 为上述 HTTPS 源站，设置 `HEALTH_HOUSE_REDIRECT=1`，将原入口通过 307 跳转到 CloudBase。外部 API 代理实测返回 `ROUTER_EXTERNAL_TARGET_CONNECTION_ERROR`，当前通过同域服务提供完整功能。
+- 会话、加密密钥与默认模型通过服务端环境变量配置。默认模型沿用本地已有模型配置，网页仍支持用户配置自己的模型。
+- `PROACTIVE_ENABLED=1`、`PROACTIVE_TZ=Asia/Shanghai`，已验证提醒到点自动执行。当前使用站内投递，外部消息通道需另行绑定。
+- `DATA_DIR=/app/data` 仍是容器本地目录，重启、重建或重新部署可能丢失档案、对话、模型配置和日程。当前部署用于功能体验，长期使用仍需完成持久存储适配。
+- 本地旧数据没有迁入新服务。模型默认配置已接入，原档案和历史仍在开发机器的数据库中。
+
+以下为恢复 Vercel 前端加 API 代理模式的配置方法。清除 `HEALTH_HOUSE_REDIRECT` 后生效，需先验证两平台网络可达。
 
 Vercel 部署步骤：
 

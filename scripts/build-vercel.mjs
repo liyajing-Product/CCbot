@@ -10,6 +10,8 @@ if (backend && (backend.protocol !== 'https:' || backend.username || backend.pas
   throw new Error('HEALTH_HOUSE_BACKEND_URL must be an HTTPS origin without credentials, path or query.');
 }
 const origin = backend?.origin;
+const redirect = process.env.HEALTH_HOUSE_REDIRECT === '1';
+if (redirect && !backend) throw new Error('HEALTH_HOUSE_REDIRECT requires HEALTH_HOUSE_BACKEND_URL.');
 const output = '.vercel/output';
 await rm(output, { recursive: true, force: true });
 await mkdir(`${output}/static`, { recursive: true });
@@ -42,7 +44,9 @@ await mkdir(`${output}/static/admin`, { recursive: true });
 await cp(`${output}/static/static/admin`, `${output}/static/admin`, { recursive: true });
 await writeFile(`${output}/config.json`, JSON.stringify({
   version: 3,
-  routes: [
+  routes: redirect ? [
+    { src: '/(.*)', status: 307, headers: { Location: `${origin}/$1`, 'Cache-Control': 'no-store' } },
+  ] : [
     ...(preview ? [
       { src: '/(?:api(?:/.*)?|health)', dest: '/backend-unavailable.json', status: 503, headers: { 'Cache-Control': 'no-store' } },
     ] : [
