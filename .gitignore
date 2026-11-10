@@ -29,3 +29,5 @@ golden-report.*
 # Generated intent artifacts (python scripts/embed_intents.py / calibrate_intents.py)
 intents/exemplar-vectors.json
 intents/calibration-report.json
+.env.*
+!.env.example
