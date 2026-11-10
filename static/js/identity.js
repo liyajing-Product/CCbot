@@ -7,6 +7,7 @@
 // out a different uid, we stop, show the expired card, and switch only when the
 // user clicks 「重新开始」.
 const CACHE_KEY = "ja.session_uid";
+const UI_PREVIEW = typeof document !== "undefined" && document.documentElement?.dataset?.preview === "true";
 let sessionPromise = null;
 // "pending" | "ready" | "expired" | "unavailable"
 let state = "pending";
@@ -127,6 +128,7 @@ export function restart() {
 }
 
 export function ensureSession(force = false) {
+  if (UI_PREVIEW) return Promise.reject(new Error("当前是界面预览，对话与数据服务尚未连接"));
   if (state === "expired" || state === "unavailable") return Promise.reject(new SessionBlocked(state));
   if (sessionPromise && !force) return sessionPromise;
   state = "pending";

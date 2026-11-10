@@ -4,6 +4,8 @@ Health House 是一个以网页为主要入口的个人健康助手。当前项�
 
 仓库：[liyajing-Product/personal_agent](https://github.com/liyajing-Product/personal_agent) · 版本：`0.8.2` · 许可证：[MIT](LICENSE)
 
+[在线界面预览](https://personal-agent-phi-gules.vercel.app/)：当前已发布前端，AI 对话、档案保存和到点提醒尚需连接持久后端。
+
 ## 当前界面与使用流程
 
 | 入口 | 当前行为 |
@@ -110,7 +112,8 @@ uvicorn app.main:app --host 127.0.0.1 --port 8789
 当前采用的部署拆分是：**Vercel 承载前端，持久服务器运行 FastAPI 与调度器**。
 
 - GitHub 仓库已用于同步当前项目代码。
-- Vercel 项目已建立并关联该仓库，但仍需配置可访问的持久后端地址，尚不能把它当作已完成的全功能公网版本。
+- Vercel 已发布[前端界面预览](https://personal-agent-phi-gules.vercel.app/)。当前设置 `HEALTH_HOUSE_PREVIEW=1`，页面明确显示服务未连接，API 返回 503，不保存用户资料、不执行对话或提醒。
+- 接入可访问的持久后端后，重新部署即可启用完整服务；不能把界面预览当作已完成的全功能公网版本。
 - 本地 `127.0.0.1:8789` 只在开发机器上可用，不是可以填写到 Vercel 的公网后端地址。
 
 Vercel 部署步骤：
@@ -120,7 +123,7 @@ Vercel 部署步骤：
 3. 使用 [vercel.json](vercel.json) 构建；[构建脚本](scripts/build-vercel.mjs) 输出前端静态文件，并同源代理 `/api/*` 和 `/health` 到后端。
 4. 执行 `npx vercel --prod` 或通过 Git 集成发布，随后验证首页、会话、档案读写、模型调用和提醒执行。
 
-构建缺少后端地址会明确报错。Vercel Functions 的临时文件系统不能直接替代本项目的持久 SQLite 数据目录，常驻调度也不能直接照搬到无状态函数中。仅给业务库配置 PostgreSQL，并不会自动迁移仍使用 SQLite 的对话检查点和所有文件存储。
+构建缺少后端地址且未显式设置 `HEALTH_HOUSE_PREVIEW=1` 时会报错。设置预览开关后可仅发布界面，不生成假会话或假 API 成功结果；配置有效后端地址后会优先使用后端并取消预览标记。Vercel Functions 的临时文件系统不能直接替代本项目的持久 SQLite 数据目录，常驻调度也不能直接照搬到无状态函数中。仅给业务库配置 PostgreSQL，并不会自动迁移仍使用 SQLite 的对话检查点和所有文件存储。
 
 仓库保留了 [Dockerfile](Dockerfile)、[render.yaml](render.yaml) 和 [部署参考](docs/deploy.md)。这些属于后端托管选项；必须按实际平台配置持久存储，不能仅凭容器启动就宣称长期记忆与定时服务已可靠上线。
 
