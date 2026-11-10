@@ -1,4 +1,5 @@
 import { $ } from "./core.js?v=__APP_VERSION__";
+import { playHomeShockwave } from "./shockwave.js?v=__APP_VERSION__";
 
 const DEFAULT_PLACEHOLDER = "描述你的健康问题，或安排一项提醒…";
 
@@ -13,15 +14,9 @@ export function initComposer({ onSubmit }) {
     if (!event.target.closest("button, textarea")) input.focus();
     const wave = $("homeAurora");
     const hero = $("hero");
-    if (!wave || !hero || hero.dataset.auroraPlayed || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!wave || !hero || hero.dataset.auroraPlayed) return;
     hero.dataset.auroraPlayed = "true";
-    wave.classList.remove("is-playing");
-    // A newly entered home view gets one greeting wave; later clicks only focus.
-    void wave.offsetWidth;
-    wave.classList.add("is-playing");
-  });
-  $("homeAurora")?.addEventListener("animationend", (event) => {
-    if (event.pseudoElement === "::after") event.currentTarget.classList.remove("is-playing");
+    playHomeShockwave();
   });
   input.addEventListener("input", () => {
     hideComposerError();
